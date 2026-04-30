@@ -5,8 +5,9 @@ export type KvOptions = {
   expireIn?: number;
 };
 
-export type KvUpdateResult = {
+export type KvUpdateResult<T> = {
   ok: boolean;
+  val: T | null;
 };
 
 export interface KvEntryInterface<TVal, TKeyPart, TKvOptions = KvOptions> {
@@ -16,7 +17,7 @@ export interface KvEntryInterface<TVal, TKeyPart, TKvOptions = KvOptions> {
   update(
     updater: (current: TVal | null) => TVal | null,
     opts?: TKvOptions,
-  ): Promise<KvUpdateResult>;
+  ): Promise<KvUpdateResult<TVal>>;
 }
 
 export interface KvRepo<

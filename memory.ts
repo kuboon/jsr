@@ -55,7 +55,7 @@ export class MemoryKvRepo<T> implements KvRepo<T, KvKeyPart, KvOptions> {
       async update(
         updater: (current: TEntryVal | null) => TEntryVal | null,
         opts: KvOptions = {},
-      ): Promise<KvUpdateResult> {
+      ): Promise<KvUpdateResult<TEntryVal>> {
         const entry = store.get(strKey);
         const current = entry && !isExpired(entry)
           ? entry.value as unknown as TEntryVal
@@ -70,7 +70,7 @@ export class MemoryKvRepo<T> implements KvRepo<T, KvKeyPart, KvOptions> {
             expireAt: expireIn != null ? Date.now() + expireIn : null,
           });
         }
-        return { ok: true };
+        return { ok: true, val: updated };
       },
     };
     return entry;

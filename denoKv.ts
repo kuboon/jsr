@@ -1,4 +1,4 @@
-import { memcache } from "./memcache.ts";
+// import { memcache } from "./memcache.ts";
 import type {
   KvEntryInterface,
   KvKey,
@@ -9,7 +9,7 @@ import type {
 } from "./types.ts";
 import { monotonicUlid } from "@std/ulid";
 
-export const kv = await Deno.openKv();
+export const kv: Deno.Kv = await Deno.openKv();
 
 export class DenoKvRepo<TVal> implements KvRepo<TVal, KvKeyPart, KvOptions> {
   constructor(public prefix: KvKey = [], public options: KvOptions = {}) {
@@ -25,26 +25,22 @@ export class DenoKvRepo<TVal> implements KvRepo<TVal, KvKeyPart, KvOptions> {
       key,
       fullKey,
       async get(): Promise<TEntryVal | null> {
-        return await memcache(this.fullKey).get(
-          () => kv.get<TEntryVal>(fullKey).then((x) => x.value),
-        );
+        return await kv.get<TEntryVal>(fullKey).then((x) => x.value);
       },
       async update(
         updater: (current: TEntryVal | null) => TEntryVal | null,
         opts: KvOptions = {},
-      ): Promise<KvUpdateResult> {
+      ): Promise<KvUpdateResult<TEntryVal>> {
         const current = await kv.get<TEntryVal>(fullKey);
         const updated = updater(current.value);
         const atomic = kv.atomic().check(current);
-        const cache = memcache(fullKey);
         if (updated === null) {
-          cache.delete();
           const result = await atomic.delete(fullKey).commit();
-          return { ok: result.ok };
+          return { ok: result.ok, val: result.ok ? null : current.value };
         }
-        cache.set(updated);
         const result = await atomic.set(fullKey, updated, opts).commit();
-        return { ok: result.ok };
+        const val = result.ok ? updated : current.value;
+        return { ok: result.ok, val };
       },
     };
   }
