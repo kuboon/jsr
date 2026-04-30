@@ -1,11 +1,11 @@
 {
   "name": "@kuboon/kv",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "exports": {
     ".": "./types.ts",
     "./memory.ts": "./memory.ts",
     "./denoKv.ts": "./denoKv.ts",
-    "./cached.ts": "./cached.ts",
+    "./cached.ts": "./cached.ts"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.19",
