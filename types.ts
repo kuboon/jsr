@@ -6,6 +6,7 @@
  *
  * - `@kuboon/kv/memory.ts` — オンメモリ実装。テスト・ローカル用。
  * - `@kuboon/kv/denoKv.ts` — Deno KV (`Deno.openKv()`) バックエンド。
+ * - `@kuboon/kv/turso.ts` — Turso (libSQL) バックエンド。
  * - `@kuboon/kv/cached.ts` — fast / slow の二層キャッシュ。
  *
  * セッションストレージ等を組み立てる際は、利用側を {@link KvRepo} 型に対して
