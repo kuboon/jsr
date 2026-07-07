@@ -40,34 +40,29 @@ import type {
 } from "./types.ts";
 
 // --- key codec ------------------------------------------------------------
-// 各キーパートを `<tag><hex>` に、パート境界を `/` で終端して連結する。hex 本体は
-// `[0-9a-f]`、tag は `[sngb]` のみなので `/` や LIKE のメタ文字 (`%` `_`) を含まず、
-// prefix 一致は末尾 `/` のおかげで文字列 prefix として安全に LIKE できる。
+// 各キーパートを `<tag><base64url>` に、パート境界を `/` で終端して連結する。
+// base64url (`A-Za-z0-9-_`) は `/` を含まないので区切りは安全。ただし `_` を含み
+// うるので、prefix 一致の LIKE ではパターン側の `_`（と `%` `\`）を ESCAPE する
+// （下の {@link escapeLike} と iterator 参照）。末尾 `/` により prefix は文字列
+// prefix として一致する。
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-const hex = (s: string): string =>
-  Array.from(encoder.encode(s), (b) => b.toString(16).padStart(2, "0")).join(
-    "",
-  );
+const b64u = (s: string): string =>
+  encoder.encode(s).toBase64({ alphabet: "base64url", omitPadding: true });
 
-const unhex = (h: string): string => {
-  const bytes = new Uint8Array(h.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
-  }
-  return decoder.decode(bytes);
-};
+const unb64u = (b: string): string =>
+  decoder.decode(Uint8Array.fromBase64(b, { alphabet: "base64url" }));
 
 const encPart = (part: KvKeyPart): string => {
   switch (typeof part) {
     case "string":
-      return "s" + hex(part);
+      return "s" + b64u(part);
     case "number":
-      return "n" + hex(String(part));
+      return "n" + b64u(String(part));
     case "bigint":
-      return "g" + hex(String(part));
+      return "g" + b64u(String(part));
     case "boolean":
       return "b" + (part ? "1" : "0");
     default:
@@ -79,11 +74,11 @@ const decPart = (token: string): KvKeyPart => {
   const body = token.slice(1);
   switch (token[0]) {
     case "s":
-      return unhex(body);
+      return unb64u(body);
     case "n":
-      return Number(unhex(body));
+      return Number(unb64u(body));
     case "g":
-      return BigInt(unhex(body));
+      return BigInt(unb64u(body));
     case "b":
       return body === "1";
     default:
@@ -93,6 +88,9 @@ const decPart = (token: string): KvKeyPart => {
 
 const encKey = (parts: KvKey): string =>
   parts.map((p) => encPart(p) + "/").join("");
+
+/** LIKE パターン用に `\` `%` `_` をエスケープする（`ESCAPE '\'` と併用）。 */
+const escapeLike = (s: string): string => s.replace(/[\\%_]/g, (c) => "\\" + c);
 
 // --- schema ---------------------------------------------------------------
 
@@ -226,8 +224,8 @@ export class TursoKvRepo<TVal> implements KvRepo<TVal, KvKeyPart, KvOptions> {
     const prefixStr = encKey(this.prefix);
     const result = await this.client.execute({
       sql:
-        "SELECT key FROM kv WHERE key LIKE ? AND (expires_at IS NULL OR expires_at > ?)",
-      args: [prefixStr + "%", Date.now()],
+        "SELECT key FROM kv WHERE key LIKE ? ESCAPE '\\' AND (expires_at IS NULL OR expires_at > ?)",
+      args: [escapeLike(prefixStr) + "%", Date.now()],
     });
     for (const row of result.rows) {
       const rest = (row.key as string).slice(prefixStr.length);
