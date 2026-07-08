@@ -1,0 +1,6 @@
+{
+  "workspace": ["./kv"],
+  "tasks": {
+    "test": "deno test"
+  }
+}
