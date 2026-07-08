@@ -17,7 +17,9 @@
     "npm:linkedom@~0.18.5": "0.18.12",
     "npm:react-dom@^19.2.0": "19.2.7_react@19.2.7",
     "npm:react@^19.2.0": "19.2.7",
+    "npm:rehype-autolink-headings@^7.1.0": "7.1.0",
     "npm:rehype-sanitize@6": "6.0.0",
+    "npm:rehype-slug@6": "6.0.0",
     "npm:remark-gfm@^4.0.1": "4.0.1",
     "npm:remark-parse@11": "11.0.0",
     "npm:remark-rehype@^11.1.2": "11.1.2",
@@ -346,6 +348,9 @@
     "extend@3.0.2": {
       "integrity": "sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g=="
     },
+    "github-slugger@2.0.0": {
+      "integrity": "sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw=="
+    },
     "hast-util-from-dom@5.0.1": {
       "integrity": "sha512-N+LqofjR2zuzTjCPzyDUdSshy4Ma6li7p/c3pA78uTwzFgENbgbUrm2ugwsOdcjI1muO+o6Dgzp9p8WHtn/39Q==",
       "dependencies": [
@@ -385,6 +390,18 @@
         "vfile",
         "vfile-location",
         "web-namespaces"
+      ]
+    },
+    "hast-util-heading-rank@3.0.0": {
+      "integrity": "sha512-EJKb8oMUXVHcWZTDepnr+WNbfnXKFNf9duMesmr4S8SXTJBJ9M4Yok08pu9vxdJwdlGRhVumk9mEhkEvKGifwA==",
+      "dependencies": [
+        "@types/hast"
+      ]
+    },
+    "hast-util-is-element@3.0.0": {
+      "integrity": "sha512-Val9mnv2IWpLbNPqc/pUem+a7Ipj2aHacCwgNfTiK0vJKl0LF+4Ba4+v1oPHFpf3bLYmreq0/l3Gud9S5OH42g==",
+      "dependencies": [
+        "@types/hast"
       ]
     },
     "hast-util-parse-selector@4.0.0": {
@@ -443,6 +460,12 @@
         "style-to-js",
         "unist-util-position",
         "vfile-message"
+      ]
+    },
+    "hast-util-to-string@3.0.1": {
+      "integrity": "sha512-XelQVTDWvqcl3axRfI0xSeoVKzyIFPwsAGSLIsKdJKQMXDYJS4WYrBNF/8J7RdhIcFI2BOHgAifggsvsxp/3+A==",
+      "dependencies": [
+        "@types/hast"
       ]
     },
     "hast-util-whitespace@3.0.0": {
@@ -1012,11 +1035,32 @@
         "regex-utilities"
       ]
     },
+    "rehype-autolink-headings@7.1.0": {
+      "integrity": "sha512-rItO/pSdvnvsP4QRB1pmPiNHUskikqtPojZKJPPPAVx9Hj8i8TwMBhofrrAYRhYOOBZH9tgmG5lPqDLuIWPWmw==",
+      "dependencies": [
+        "@types/hast",
+        "@ungap/structured-clone",
+        "hast-util-heading-rank",
+        "hast-util-is-element",
+        "unified",
+        "unist-util-visit"
+      ]
+    },
     "rehype-sanitize@6.0.0": {
       "integrity": "sha512-CsnhKNsyI8Tub6L4sm5ZFsme4puGfc6pYylvXo1AeqaGbjOYyzNv3qZPwvs0oMJ39eryyeOdmxwUIo94IpEhqg==",
       "dependencies": [
         "@types/hast",
         "hast-util-sanitize"
+      ]
+    },
+    "rehype-slug@6.0.0": {
+      "integrity": "sha512-lWyvf/jwu+oS5+hL5eClVd3hNdmwM1kAC0BUvEGD19pajQMIzcNUd/k9GsfQ+FfECvX+JE+e9/btsKH0EjJT6A==",
+      "dependencies": [
+        "@types/hast",
+        "github-slugger",
+        "hast-util-heading-rank",
+        "hast-util-to-string",
+        "unist-util-visit"
       ]
     },
     "remark-gfm@4.0.1": {
@@ -1214,7 +1258,9 @@
           "npm:linkedom@~0.18.5",
           "npm:react-dom@^19.2.0",
           "npm:react@^19.2.0",
+          "npm:rehype-autolink-headings@^7.1.0",
           "npm:rehype-sanitize@6",
+          "npm:rehype-slug@6",
           "npm:remark-gfm@^4.0.1",
           "npm:remark-parse@11",
           "npm:remark-rehype@^11.1.2",

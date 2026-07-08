@@ -7,6 +7,8 @@
 
 - GitHub Flavored
   Markdown（テーブル、タスクリスト、取り消し線、オートリンク）に対応。
+- 各見出しに `id`（GitHub 互換のスラッグ）を自動付与し、見出し自身にリンクする
+  `<a href="#slug">` を設定（無効化・カスタマイズ可）。
 - `` ```mermaid `` コードブロックを
   [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) で SVG
   図として描画。
@@ -101,6 +103,8 @@ const hast = await markdownToHast("# Hello", {
   shiki: { theme: "github-dark" },
   // ライト/ダーク両対応もできる
   // shiki: { themes: { light: "github-light", dark: "github-dark" } },
+  // 見出し ID・自己リンクの挙動を変える（あるいは headingLinks: false で無効化）
+  headingLinks: { prefix: "user-content-", behavior: "wrap" },
   // remark-rehype で hast に変換する直前、mdast に対して好きな変換をかけられる
   mdastTransform: (tree) => {
     visit(tree, "heading", (node) => {
@@ -127,6 +131,9 @@ const hast = await markdownToHast("# Hello", {
    を参照）で個別にサニタイズしてから本文に埋め込まれる。 `<foreignObject>` や
    `<script>`、イベントハンドラ属性 (`on*`)
    は許可リストに存在しないため必ず除去される。
+4. 見出しの `id` はユーザーが書いた見出しテキストから生成されるため、既定で
+   `user-content-` を付与する（GitHub と同じ規約）。これにより
+   `id="constructor"` のような値による DOM clobbering を防ぐ。
 
 ## API
 
@@ -135,6 +142,8 @@ const hast = await markdownToHast("# Hello", {
 - `rehypeMermaid(options?)` — Mermaid コードブロックを SVG に置き換える rehype
   プラグイン単体。
 - `rehypeShiki(options?)` — コードブロックを Shiki でハイライトする rehype
+  プラグイン単体。
+- `rehypeHeadingLinks(options?)` — 見出しに `id` と自己リンクを付与する rehype
   プラグイン単体。
 - `markdownSchema` / `mermaidSvgSchema` / `shikiSchema` —
   それぞれの用途で使うサニタイズスキーマ。独自の unified パイプラインを組む際に

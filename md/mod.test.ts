@@ -13,7 +13,10 @@ async function render(
 
 Deno.test("markdownToHast: renders basic markdown", async () => {
   const html = await render("# Hello\n\nSome **bold** text.");
-  assertStringIncludes(html, "<h1>Hello</h1>");
+  assertStringIncludes(
+    html,
+    '<h1 id="user-content-hello"><a href="#user-content-hello">Hello</a></h1>',
+  );
   assertStringIncludes(html, "<strong>bold</strong>");
 });
 
@@ -85,5 +88,27 @@ Deno.test("markdownToHast: runs a custom mdast transformer", async () => {
       });
     },
   });
-  assertStringIncludes(toHtml(hast), "<h2>Hello</h2>");
+  assertStringIncludes(
+    toHtml(hast),
+    '<h2 id="user-content-hello"><a href="#user-content-hello">Hello</a></h2>',
+  );
+});
+
+Deno.test("markdownToHast: heading ids are deduplicated", async () => {
+  const html = await render("# Hello\n\n# Hello\n");
+  assertStringIncludes(html, 'id="user-content-hello"');
+  assertStringIncludes(html, 'id="user-content-hello-1"');
+});
+
+Deno.test("markdownToHast: headingLinks can be disabled", async () => {
+  const html = await render("# Hello\n", { headingLinks: false });
+  assertStringIncludes(html, "<h1>Hello</h1>");
+});
+
+Deno.test("markdownToHast: headingLinks prefix and behavior are configurable", async () => {
+  const html = await render("# Hello\n", {
+    headingLinks: { prefix: "", behavior: "append" },
+  });
+  assertStringIncludes(html, '<h1 id="hello">Hello<a');
+  assertStringIncludes(html, 'href="#hello">');
 });

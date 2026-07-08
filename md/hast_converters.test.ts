@@ -10,7 +10,10 @@ import { hastToReact } from "./hast_to_react.ts";
 Deno.test("hastToHtml: serializes a hast tree", async () => {
   const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
   const html = hastToHtml(hast);
-  assertStringIncludes(html, "<h1>Hi</h1>");
+  assertStringIncludes(
+    html,
+    '<h1 id="user-content-hi"><a href="#user-content-hi">Hi</a></h1>',
+  );
   assertStringIncludes(html, "<strong>bold</strong>");
 });
 
@@ -22,7 +25,10 @@ Deno.test("hastToDom: renders into a DOM fragment", async () => {
   const fragment = hastToDom(hast, { document });
   const container = document.createElement("div");
   container.append(fragment);
-  assertStringIncludes(container.innerHTML, "<h1>Hi</h1>");
+  assertStringIncludes(
+    container.innerHTML,
+    '<h1 id="user-content-hi"><a href="#user-content-hi">Hi</a></h1>',
+  );
   assertStringIncludes(container.innerHTML, "<strong>bold</strong>");
 });
 
@@ -42,6 +48,9 @@ Deno.test("hastToRemix: builds a Remix UI element tree", async () => {
 Deno.test("hastToReact: builds a React element tree", async () => {
   const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
   const html = renderToStaticMarkup(hastToReact(hast));
-  assertStringIncludes(html, "<h1>Hi</h1>");
+  assertStringIncludes(
+    html,
+    '<h1 id="user-content-hi"><a href="#user-content-hi">Hi</a></h1>',
+  );
   assertStringIncludes(html, "<strong>bold</strong>");
 });

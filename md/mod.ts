@@ -8,7 +8,8 @@
  * import { hastToHtml, markdownToHast } from "@kuboon/md";
  *
  * const hast = await markdownToHast("# Hello");
- * const html = hastToHtml(hast); // "<h1>Hello</h1>"
+ * const html = hastToHtml(hast);
+ * // <h1 id="user-content-hello"><a href="#user-content-hello">Hello</a></h1>
  * ```
  *
  * Convert the resulting hast tree to whatever you need next with
@@ -33,10 +34,18 @@ import remarkRehype from "remark-rehype";
 import rehypeSanitize from "rehype-sanitize";
 import { rehypeMermaid, type RehypeMermaidOptions } from "./mermaid.ts";
 import { rehypeShiki, type RehypeShikiOptions } from "./shiki.ts";
+import {
+  rehypeHeadingLinks,
+  type RehypeHeadingLinksOptions,
+} from "./heading_links.ts";
 import { markdownSchema } from "./sanitize.ts";
 
 export { rehypeMermaid, type RehypeMermaidOptions } from "./mermaid.ts";
 export { rehypeShiki, type RehypeShikiOptions } from "./shiki.ts";
+export {
+  rehypeHeadingLinks,
+  type RehypeHeadingLinksOptions,
+} from "./heading_links.ts";
 export { markdownSchema, mermaidSvgSchema, shikiSchema } from "./sanitize.ts";
 export { hastToDom, type HastToDomOptions } from "./hast_to_dom.ts";
 export { hastToHtml, type HastToHtmlOptions } from "./hast_to_html.ts";
@@ -50,6 +59,11 @@ export interface MarkdownToHastOptions {
   /** Options passed to Shiki (theme(s), default language). */
   shiki?: RehypeShikiOptions;
   /**
+   * Options for the automatic heading `id`s and self-links. Pass `false`
+   * to disable heading anchors entirely.
+   */
+  headingLinks?: RehypeHeadingLinksOptions | false;
+  /**
    * An mdast transformer run right after parsing (GFM included), before
    * the tree is converted to hast. Use this to plug in remark plugins
    * such as `remark-frontmatter` or `remark-toc`.
@@ -62,6 +76,9 @@ export interface MarkdownToHastOptions {
  *
  * - GitHub Flavored Markdown is supported (tables, task lists,
  *   strikethrough, autolinks).
+ * - Every heading gets a stable `id` slug and a self-link
+ *   (`<a href="#slug">`) wrapping its content — see
+ *   {@linkcode RehypeHeadingLinksOptions} to customize or disable this.
  * - Mermaid code blocks (language `mermaid`) are rendered to SVG diagrams
  *   with `beautiful-mermaid`.
  * - Other fenced code blocks are syntax-highlighted with Shiki.
@@ -113,6 +130,9 @@ export async function markdownToHast(
     .use(rehypeSanitize, markdownSchema)
     .use(rehypeMermaid, options.mermaid)
     .use(rehypeShiki, options.shiki);
+  if (options.headingLinks !== false) {
+    processor.use(rehypeHeadingLinks, options.headingLinks);
+  }
 
   const mdast = processor.parse(markdown);
   return await processor.run(mdast) as HastRoot;
