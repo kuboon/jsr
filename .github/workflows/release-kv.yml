@@ -13,7 +13,18 @@ permissions:
   id-token: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - working-directory: kv
+        run: deno task test
+
   release:
+    needs: test
     uses: kuboon/workflows/.github/workflows/release-jsr.yml@main
     with:
       directory: kv

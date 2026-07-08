@@ -8,6 +8,9 @@
     "./turso.ts": "./turso.ts",
     "./cached.ts": "./cached.ts"
   },
+  "tasks": {
+    "test": "deno test -A"
+  },
   "imports": {
     "@libsql/client": "npm:@libsql/client@^0.17.4",
     "@std/assert": "jsr:@std/assert@^1.0.19",
