@@ -9,7 +9,7 @@
     "./cached.ts": "./cached.ts"
   },
   "tasks": {
-    "test": "deno test -A"
+    "test": "deno test"
   },
   "imports": {
     "@libsql/client": "npm:@libsql/client@^0.17.4",
