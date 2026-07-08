@@ -22,10 +22,19 @@
   でサニタイズされる。
 
 `markdownToHast()` は HTML 文字列ではなく hast
-ツリーを返す。文字列化したい場合は
-[`rehype-stringify`](https://github.com/rehypejs/rehype-stringify) や
-[`hast-util-to-html`](https://github.com/syntax-tree/hast-util-to-html)
-などを併用する。
+ツリーを返す。用途に応じて、以下のいずれかの変換関数で出力先に変換する。
+
+- `hastToHtml(hast)` — HTML
+  文字列に変換（[`hast-util-to-html`](https://github.com/syntax-tree/hast-util-to-html)
+  のラッパー）。
+- `hastToDom(hast, options?)` — 実 DOM
+  ノードに変換（[`hast-util-to-dom`](https://github.com/syntax-tree/hast-util-to-dom)
+  のラッパー）。ブラウザの `document`、または `options.document` 経由で渡した
+  DOM 実装（`linkedom` など）を使う。
+- `hastToRemix(hast)` —
+  [Remix UI](https://github.com/remix-run/remix/tree/main/packages/ui)
+  の要素ツリー（`RemixNode`）に変換。`createRoot(...).render(...)`
+  にそのまま渡せる。
 
 ## インストール
 
@@ -55,6 +64,18 @@ const answer: number = 42;
 `);
 
 const html = toHtml(hast);
+```
+
+`@kuboon/md` が提供する変換関数を使う場合:
+
+```ts
+import { hastToDom, hastToHtml, hastToRemix, markdownToHast } from "@kuboon/md";
+
+const hast = await markdownToHast("# Hello");
+
+const html = hastToHtml(hast);
+const dom = hastToDom(hast); // ブラウザの document を使う
+const remix = hastToRemix(hast); // createRoot(...).render(remix) に渡せる
 ```
 
 ### オプション
@@ -108,6 +129,12 @@ const hast = await markdownToHast(markdown, {
 - `markdownSchema` / `mermaidSvgSchema` / `shikiSchema` / `./sanitize.ts` —
   それぞれの用途で使うサニタイズスキーマ。独自の unified パイプラインを組む際に
   再利用できる。
+- `hastToHtml(hast, options?)` / `./hast_to_html.ts` — hast を HTML
+  文字列に変換する。
+- `hastToDom(hast, options?)` / `./hast_to_dom.ts` — hast を実 DOM
+  ノードに変換する。
+- `hastToRemix(hast)` / `./hast_to_remix.ts` — hast を Remix UI の要素ツリーに
+  変換する。
 
 ## Links
 
