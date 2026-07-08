@@ -6,9 +6,10 @@
 
 ## Packages
 
-| Package | ディレクトリ | 説明 |
-| --- | --- | --- |
-| [@kuboon/kv](https://jsr.io/@kuboon/kv) | [`kv/`](./kv) | バックエンド非依存の Key-Value ストア抽象 |
+| Package                                 | ディレクトリ  | 説明                                                     |
+| --------------------------------------- | ------------- | -------------------------------------------------------- |
+| [@kuboon/kv](https://jsr.io/@kuboon/kv) | [`kv/`](./kv) | バックエンド非依存の Key-Value ストア抽象                |
+| [@kuboon/md](https://jsr.io/@kuboon/md) | [`md/`](./md) | Mermaid/Shiki 対応の unified ベース Markdown → HTML 変換 |
 
 ## 開発
 
@@ -19,7 +20,8 @@ deno task test
 
 ## 新しいパッケージの追加
 
-1. ルートに新しいディレクトリを作り、`deno.json`（`name` / `version` / `exports`）を置く。
+1. ルートに新しいディレクトリを作り、`deno.json`（`name` / `version` /
+   `exports`）を置く。
 2. ルート `deno.json` の `workspace` にそのディレクトリを追加する。
 3. この README の Packages 表に 1 行足す。
 
