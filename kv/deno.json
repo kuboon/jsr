@@ -1,6 +1,7 @@
 {
   "name": "@kuboon/kv",
   "version": "0.2.0",
+  "license": "MIT",
   "exports": {
     ".": "./types.ts",
     "./memory.ts": "./memory.ts",
