@@ -142,7 +142,7 @@ export const mermaidSvgSchema: Schema = {
  * HTML attribute names (`class`, `tabindex`) rather than hast's usual
  * camelCase property names (`className`, `tabIndex`), so the schema below
  * intentionally matches those literal names instead of the hast
- * convention used in `mermaidSvgSchema`.
+ * convention used in {@linkcode mermaidSvgSchema}.
  */
 export const shikiSchema: Schema = {
   clobber: [],

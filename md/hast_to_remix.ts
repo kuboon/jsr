@@ -1,3 +1,11 @@
+/**
+ * Convert a hast (HTML AST) tree into a
+ * {@link https://github.com/remix-run/remix/tree/main/packages/ui | Remix UI}
+ * element tree.
+ *
+ * @module
+ */
+
 import { createElement } from "@remix-run/ui";
 import type { RemixNode } from "@remix-run/ui";
 import type { Element as HastElement, Nodes as HastNodes } from "hast";
@@ -30,10 +38,24 @@ function convert(node: HastNodes): RemixNode | undefined {
 }
 
 /**
- * Convert a hast tree into a Remix UI element tree (`RemixNode`), ready to
- * hand to `createRoot(...).render(...)` from `@remix-run/ui`.
+ * Convert a hast tree into a
+ * {@link https://github.com/remix-run/remix/tree/main/packages/ui | Remix UI}
+ * element tree (`RemixNode`), ready to hand to `createRoot(...).render(...)`.
  *
- * Reference: https://github.com/remix-run/remix/blob/main/packages/ui/src/runtime/jsx.ts
+ * Follows the element shape described in
+ * {@link https://github.com/remix-run/remix/blob/main/packages/ui/src/runtime/jsx.ts | Remix's jsx.ts}.
+ *
+ * @example
+ * ```ts
+ * import { hastToRemix, markdownToHast } from "@kuboon/md";
+ *
+ * const hast = await markdownToHast("# Hello");
+ * const remix = hastToRemix(hast);
+ * // createRoot(container).render(remix); // from "@remix-run/ui"
+ * ```
+ *
+ * @param tree The hast tree to convert.
+ * @returns A Remix UI `RemixNode`.
  */
 export function hastToRemix(tree: HastNodes): RemixNode {
   return convert(tree) ?? [];

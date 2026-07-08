@@ -1,3 +1,28 @@
+/**
+ * A [unified](https://unifiedjs.com/)-based Markdown → sanitized hast (HTML
+ * AST) converter, with Mermaid diagrams via
+ * {@link https://github.com/lukilabs/beautiful-mermaid | beautiful-mermaid}
+ * and code highlighting via {@link https://shiki.style/ | Shiki}.
+ *
+ * ```ts
+ * import { hastToHtml, markdownToHast } from "@kuboon/md";
+ *
+ * const hast = await markdownToHast("# Hello");
+ * const html = hastToHtml(hast); // "<h1>Hello</h1>"
+ * ```
+ *
+ * Convert the resulting hast tree to whatever you need next with
+ * {@linkcode hastToHtml}, {@linkcode hastToDom}, {@linkcode hastToReact}, or
+ * {@linkcode hastToRemix}.
+ *
+ * > [!IMPORTANT]
+ * > Raw HTML in the Markdown input (`<script>`, `onerror=` attributes,
+ * > `javascript:` links, ...) never reaches the output — see
+ * > {@linkcode markdownToHast} for how that's guaranteed.
+ *
+ * @module
+ */
+
 import { unified } from "unified";
 import type { Transformer } from "unified";
 import type { Root as MdastRoot } from "mdast";
@@ -18,6 +43,7 @@ export { hastToHtml, type HastToHtmlOptions } from "./hast_to_html.ts";
 export { hastToRemix } from "./hast_to_remix.ts";
 export { hastToReact, type HastToReactOptions } from "./hast_to_react.ts";
 
+/** Options for {@linkcode markdownToHast}. */
 export interface MarkdownToHastOptions {
   /** Options passed to `beautiful-mermaid`'s renderer (theme colors, etc.). */
   mermaid?: RehypeMermaidOptions;
@@ -36,8 +62,8 @@ export interface MarkdownToHastOptions {
  *
  * - GitHub Flavored Markdown is supported (tables, task lists,
  *   strikethrough, autolinks).
- * - ` ```mermaid ` code blocks are rendered to SVG diagrams with
- *   `beautiful-mermaid`.
+ * - Mermaid code blocks (language `mermaid`) are rendered to SVG diagrams
+ *   with `beautiful-mermaid`.
  * - Other fenced code blocks are syntax-highlighted with Shiki.
  * - Raw HTML in the input (`<script>`, `onerror=`, `javascript:` links,
  *   ...) never reaches the output: the Markdown parser drops raw HTML
@@ -45,8 +71,34 @@ export interface MarkdownToHastOptions {
  *   Markdown-derived content, the rendered diagrams, and the highlighted
  *   code — is passed through `rehype-sanitize` before being returned.
  *
- * Serialize the result yourself (e.g. with `rehype-stringify`) if you
- * need an HTML string.
+ * Convert the result yourself (e.g. with {@linkcode hastToHtml}) if you
+ * need an HTML string, or with {@linkcode hastToDom}, {@linkcode
+ * hastToReact}, {@linkcode hastToRemix} for other targets.
+ *
+ * @example
+ * ```ts
+ * import { markdownToHast } from "@kuboon/md";
+ *
+ * const hast = await markdownToHast("# Hello\n\n**bold** text");
+ * ```
+ *
+ * @example With a custom mdast transformer
+ * ```ts
+ * import { markdownToHast } from "@kuboon/md";
+ * import { visit } from "unist-util-visit";
+ *
+ * const hast = await markdownToHast("# Hello", {
+ *   mdastTransform: (tree) => {
+ *     visit(tree, "heading", (node) => {
+ *       if (node.depth < 6) node.depth = (node.depth + 1) as typeof node.depth;
+ *     });
+ *   },
+ * });
+ * ```
+ *
+ * @param markdown The Markdown source to convert.
+ * @param options See {@linkcode MarkdownToHastOptions}.
+ * @returns The sanitized hast root node.
  */
 export async function markdownToHast(
   markdown: string,

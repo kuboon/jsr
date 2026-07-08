@@ -6,6 +6,7 @@ import { mermaidSvgSchema } from "./sanitize.ts";
 import { findCode, languageOf, textOf } from "./hast_utils.ts";
 import type { Element, ElementContent, Root } from "hast";
 
+/** Options forwarded to `beautiful-mermaid`'s `renderMermaid` (theme colors, spacing, etc.). */
 export type RehypeMermaidOptions = RenderOptions;
 
 /** Removes the remote Google Fonts `@import` the renderer embeds by default. */
@@ -14,14 +15,22 @@ function stripRemoteFontImports(svg: string): string {
 }
 
 /**
- * Rehype plugin that replaces ` ```mermaid ` code blocks with a diagram
- * rendered to SVG via `beautiful-mermaid`.
+ * Rehype plugin that replaces Mermaid code blocks (language `mermaid`) with
+ * a diagram rendered to SVG via `beautiful-mermaid`.
  *
  * Run this *after* the Markdown content itself has been sanitized
- * (e.g. after `rehype-sanitize` with `markdownSchema`): this plugin only
- * sanitizes the SVG it generates, using a schema scoped to SVG's
- * presentational elements (see `mermaidSvgSchema`), as defense in depth
- * in case a diagram's label text ever leaks markup into the output.
+ * (e.g. after `rehype-sanitize` with {@linkcode markdownSchema}): this
+ * plugin only sanitizes the SVG it generates, using a schema scoped to
+ * SVG's presentational elements ({@linkcode mermaidSvgSchema}), as defense
+ * in depth in case a diagram's label text ever leaks markup into the
+ * output.
+ *
+ * Used internally by {@linkcode markdownToHast}; import it directly only if
+ * you're assembling your own `unified` pipeline instead of using that
+ * function.
+ *
+ * @param options Theme colors and layout options passed to `beautiful-mermaid`.
+ * @returns A `unified` tree transformer.
  */
 export function rehypeMermaid(
   options: RehypeMermaidOptions = {},

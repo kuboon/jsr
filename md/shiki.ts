@@ -5,6 +5,7 @@ import { shikiSchema } from "./sanitize.ts";
 import { findCode, languageOf, textOf } from "./hast_utils.ts";
 import type { Element, Root } from "hast";
 
+/** Options for {@linkcode rehypeShiki}. */
 export interface RehypeShikiOptions {
   /** Single Shiki theme name. Ignored if `themes` is set. Default: `"github-dark"`. */
   theme?: string;
@@ -18,9 +19,16 @@ export interface RehypeShikiOptions {
  * Rehype plugin that highlights fenced code blocks with Shiki.
  *
  * Run this *after* the Markdown content itself has been sanitized and
- * after `rehypeMermaid` (so ` ```mermaid ` blocks are already turned into
- * diagrams and skipped here). Each highlighted block is re-sanitized with
- * `shikiSchema` as defense in depth.
+ * after {@linkcode rehypeMermaid} (so Mermaid code blocks are already
+ * turned into diagrams and skipped here). Each highlighted block is
+ * re-sanitized with {@linkcode shikiSchema} as defense in depth.
+ *
+ * Used internally by {@linkcode markdownToHast}; import it directly only
+ * if you're assembling your own `unified` pipeline instead of using that
+ * function.
+ *
+ * @param options Theme(s) and default-language settings passed to Shiki.
+ * @returns A `unified` tree transformer.
  */
 export function rehypeShiki(
   options: RehypeShikiOptions = {},

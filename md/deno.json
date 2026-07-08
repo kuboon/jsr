@@ -10,7 +10,7 @@
     "./hast_to_react.ts": "./hast_to_react.ts"
   },
   "tasks": {
-    "test": "deno test --allow-read --allow-env --allow-net"
+    "test": "deno test --doc --allow-read --allow-env --allow-net"
   },
   "imports": {
     "unified": "npm:unified@^11.0.5",
