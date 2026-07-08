@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - "kv/**"
+  pull_request:
+    paths:
+      - "kv/**"
   workflow_dispatch:
 
 permissions:
@@ -25,6 +28,7 @@ jobs:
 
   release:
     needs: test
+    if: github.event_name != 'pull_request'
     uses: kuboon/workflows/.github/workflows/release-jsr.yml@main
     with:
       directory: kv
