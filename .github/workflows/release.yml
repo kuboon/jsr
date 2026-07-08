@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno task test
+
+  # Discover every package directory (a subdir with a deno.json / jsr.json) so
+  # new packages are released automatically without editing this workflow.
+  discover:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: list
+        run: |
+          packages=$(
+            for f in */deno.json */jsr.json; do
+              [ -e "$f" ] || continue
+              dirname "$f"
+            done | sort -u | jq -R . | jq -sc .
+          )
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+          echo "Discovered packages: $packages"
+
+  release:
+    needs: discover
+    strategy:
+      max-parallel: 1
+      matrix:
+        directory: ${{ fromJson(needs.discover.outputs.packages) }}
+    uses: kuboon/workflows/.github/workflows/release-jsr.yml@main
+    with:
+      directory: ${{ matrix.directory }}

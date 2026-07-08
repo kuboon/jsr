@@ -148,10 +148,14 @@
     }
   },
   "workspace": {
-    "dependencies": [
-      "jsr:@std/assert@^1.0.19",
-      "jsr:@std/ulid@1",
-      "npm:@libsql/client@~0.17.4"
-    ]
+    "members": {
+      "kv": {
+        "dependencies": [
+          "jsr:@std/assert@^1.0.19",
+          "jsr:@std/ulid@1",
+          "npm:@libsql/client@~0.17.4"
+        ]
+      }
+    }
   }
 }
