@@ -122,11 +122,11 @@ const hast = await markdownToHast(markdown, {
 
 - `markdownToHast(markdown, options?)` — Markdown を上記の方針でサニタイズ済み
   hast ツリーに変換する。
-- `rehypeMermaid(options?)` / `./mermaid.ts` — Mermaid コードブロックを SVG に
-  置き換える rehype プラグイン単体。
-- `rehypeShiki(options?)` / `./shiki.ts` — コードブロックを Shiki
-  でハイライトする rehype プラグイン単体。
-- `markdownSchema` / `mermaidSvgSchema` / `shikiSchema` / `./sanitize.ts` —
+- `rehypeMermaid(options?)` — Mermaid コードブロックを SVG に置き換える rehype
+  プラグイン単体。
+- `rehypeShiki(options?)` — コードブロックを Shiki でハイライトする rehype
+  プラグイン単体。
+- `markdownSchema` / `mermaidSvgSchema` / `shikiSchema` —
   それぞれの用途で使うサニタイズスキーマ。独自の unified パイプラインを組む際に
   再利用できる。
 - `hastToHtml(hast, options?)` / `./hast_to_html.ts` — hast を HTML

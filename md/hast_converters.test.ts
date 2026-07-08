@@ -13,10 +13,9 @@ Deno.test("hastToHtml: serializes a hast tree", async () => {
 });
 
 Deno.test("hastToDom: renders into a DOM fragment", async () => {
+  const window = parseHTML("<!doctype html><html><body></body></html>");
   // deno-lint-ignore no-explicit-any
-  const { document } = parseHTML(
-    "<!doctype html><html><body></body></html>",
-  ) as any;
+  const document = (window as any).document;
   const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
   const fragment = hastToDom(hast, { document });
   const container = document.createElement("div");

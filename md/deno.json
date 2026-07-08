@@ -4,9 +4,6 @@
   "license": "MIT",
   "exports": {
     ".": "./mod.ts",
-    "./mermaid.ts": "./mermaid.ts",
-    "./shiki.ts": "./shiki.ts",
-    "./sanitize.ts": "./sanitize.ts",
     "./hast_to_dom.ts": "./hast_to_dom.ts",
     "./hast_to_html.ts": "./hast_to_html.ts",
     "./hast_to_remix.ts": "./hast_to_remix.ts"
