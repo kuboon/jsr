@@ -1,6 +1,6 @@
 {
-  "workspace": ["./kv"],
+  "workspace": ["./kv", "./md"],
   "tasks": {
-    "test": "deno test"
+    "test": "deno test --allow-read --allow-env --allow-net"
   }
 }
