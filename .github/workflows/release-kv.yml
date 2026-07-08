@@ -1,0 +1,19 @@
+name: Release kv
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "kv/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    uses: kuboon/workflows/.github/workflows/release-jsr.yml@main
+    with:
+      directory: kv
