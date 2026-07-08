@@ -16,6 +16,7 @@ export { markdownSchema, mermaidSvgSchema, shikiSchema } from "./sanitize.ts";
 export { hastToDom, type HastToDomOptions } from "./hast_to_dom.ts";
 export { hastToHtml, type HastToHtmlOptions } from "./hast_to_html.ts";
 export { hastToRemix } from "./hast_to_remix.ts";
+export { hastToReact, type HastToReactOptions } from "./hast_to_react.ts";
 
 export interface MarkdownToHastOptions {
   /** Options passed to `beautiful-mermaid`'s renderer (theme colors, etc.). */

@@ -1,9 +1,11 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { parseHTML } from "linkedom";
+import { renderToStaticMarkup } from "react-dom/server";
 import { markdownToHast } from "./mod.ts";
 import { hastToHtml } from "./hast_to_html.ts";
 import { hastToDom } from "./hast_to_dom.ts";
 import { hastToRemix } from "./hast_to_remix.ts";
+import { hastToReact } from "./hast_to_react.ts";
 
 Deno.test("hastToHtml: serializes a hast tree", async () => {
   const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
@@ -35,4 +37,11 @@ Deno.test("hastToRemix: builds a Remix UI element tree", async () => {
   };
   assertEquals(paragraph.type, "p");
   assertStringIncludes(JSON.stringify(paragraph), "https://example.com");
+});
+
+Deno.test("hastToReact: builds a React element tree", async () => {
+  const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
+  const html = renderToStaticMarkup(hastToReact(hast));
+  assertStringIncludes(html, "<h1>Hi</h1>");
+  assertStringIncludes(html, "<strong>bold</strong>");
 });

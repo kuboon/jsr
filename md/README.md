@@ -35,6 +35,9 @@
   [Remix UI](https://github.com/remix-run/remix/tree/main/packages/ui)
   の要素ツリー（`RemixNode`）に変換。`createRoot(...).render(...)`
   にそのまま渡せる。
+- `hastToReact(hast, options?)` — React
+  の要素ツリーに変換（[`hast-util-to-jsx-runtime`](https://github.com/syntax-tree/hast-util-to-jsx-runtime)
+  のラッパー）。`react-dom` などでそのままレンダリングできる。
 
 ## インストール
 
@@ -69,13 +72,20 @@ const html = toHtml(hast);
 `@kuboon/md` が提供する変換関数を使う場合:
 
 ```ts
-import { hastToDom, hastToHtml, hastToRemix, markdownToHast } from "@kuboon/md";
+import {
+  hastToDom,
+  hastToHtml,
+  hastToReact,
+  hastToRemix,
+  markdownToHast,
+} from "@kuboon/md";
 
 const hast = await markdownToHast("# Hello");
 
 const html = hastToHtml(hast);
 const dom = hastToDom(hast); // ブラウザの document を使う
 const remix = hastToRemix(hast); // createRoot(...).render(remix) に渡せる
+const react = hastToReact(hast); // <ReactDOM.render> などにそのまま渡せる
 ```
 
 ### オプション
@@ -135,6 +145,8 @@ const hast = await markdownToHast(markdown, {
   ノードに変換する。
 - `hastToRemix(hast)` / `./hast_to_remix.ts` — hast を Remix UI の要素ツリーに
   変換する。
+- `hastToReact(hast, options?)` / `./hast_to_react.ts` — hast を React
+  の要素ツリーに変換する。
 
 ## Links
 
