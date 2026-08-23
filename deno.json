@@ -1,5 +1,5 @@
 {
-  "workspace": ["./kv", "./md"],
+  "workspace": ["./kv", "./md", "./file-server-behavior"],
   "tasks": {
     "test": "deno test --allow-read --allow-env --allow-net"
   }
