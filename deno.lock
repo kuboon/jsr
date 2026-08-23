@@ -1236,6 +1236,11 @@
   },
   "workspace": {
     "members": {
+      "file-server-behavior": {
+        "dependencies": [
+          "jsr:@std/assert@^1.0.19"
+        ]
+      },
       "kv": {
         "dependencies": [
           "jsr:@std/assert@^1.0.19",
