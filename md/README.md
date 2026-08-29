@@ -13,7 +13,8 @@
   [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) で SVG
   図として描画。
 - それ以外のコードブロックは [Shiki](https://shiki.style/)
-  でシンタックスハイライト。
+  でシンタックスハイライト（既定は `web`
+  バンドル。[バンドルサイズ](#バンドルサイズと-shiki) を参照）。
 - mdast 段階（remark-rehype で hast に変換する前）に独自の transformer
   を挟める。
 - 入力 Markdown 中の生 HTML（`<script>` や `onerror=` 属性、`javascript:`
@@ -103,6 +104,8 @@ const hast = await markdownToHast("# Hello", {
   shiki: { theme: "github-dark" },
   // ライト/ダーク両対応もできる
   // shiki: { themes: { light: "github-light", dark: "github-dark" } },
+  // 自前の highlighter を渡してバンドルを削ることもできる（下記参照）
+  // shiki: { highlighter, theme: "github-dark" },
   // 見出し ID・自己リンクの挙動を変える（あるいは headingLinks: false で無効化）
   headingLinks: { prefix: "user-content-", behavior: "wrap" },
   // remark-rehype で hast に変換する直前、mdast に対して好きな変換をかけられる
@@ -113,6 +116,51 @@ const hast = await markdownToHast("# Hello", {
   },
 });
 ```
+
+## バンドルサイズと Shiki
+
+Shiki は文法とテーマの塊で、既定でどれを積むかがそのままビルド成果物の大きさに
+なる。このパッケージの既定は Shiki の `web`
+バンドル（主要言語を必要時に読み込む）。
+
+`md/mod.ts` を `deno bundle --minify --platform browser` した実測値:
+
+| Shiki の入れ方                           | バンドル       | `node_modules` |
+| ---------------------------------------- | -------------- | -------------- |
+| `shiki`（全言語）                        | 12 MB          | 24 MB          |
+| **`shiki/bundle/web`（既定）**           | **6.8 MB**     | 24 MB          |
+| `createHighlighterCore` + 必要な言語だけ | **352 KB**[^1] | 24 MB          |
+
+[^1]: Shiki 単体での実測（`shiki/core` + JS 正規表現エンジン + TypeScript +
+    JSON + 1テーマ）。
+
+**`node_modules` はどれでも変わらない。** Shiki は全文法を `@shikijs/langs`
+1パッケージで配っているので、どのエントリポイントから import しても npm
+は同じものを入れる。変わるのはビルド成果物のほうだけ。
+
+既定より小さくしたいときは、自分で組んだ highlighter を渡す:
+
+```ts ignore
+import { createHighlighterCore } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import ts from "@shikijs/langs/typescript";
+import githubDark from "@shikijs/themes/github-dark";
+import { markdownToHast } from "@kuboon/md";
+
+const highlighter = await createHighlighterCore({
+  langs: [ts],
+  themes: [githubDark],
+  engine: createJavaScriptRegexEngine(),
+});
+
+const hast = await markdownToHast(source, {
+  shiki: { highlighter, theme: "github-dark" },
+});
+```
+
+渡した highlighter
+が持っていない言語は、未知の言語と同じくプレーンテキストとして 出力される（Shiki
+のマークアップは付くが、トークンごとの色は付かない）。
 
 ## セキュリティに関する設計
 

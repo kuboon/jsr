@@ -1,6 +1,10 @@
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { toHtml } from "hast-util-to-html";
 import { visit } from "unist-util-visit";
+import { createHighlighterCore } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import ts from "@shikijs/langs/typescript";
+import githubDark from "@shikijs/themes/github-dark";
 import { markdownToHast } from "./mod.ts";
 
 async function render(
@@ -111,4 +115,27 @@ Deno.test("markdownToHast: headingLinks prefix and behavior are configurable", a
   });
   assertStringIncludes(html, '<h1 id="hello">Hello<a');
   assertStringIncludes(html, 'href="#hello">');
+});
+
+Deno.test("rehypeShiki: a core highlighter replaces the bundled one", async () => {
+  // The point of this test is the type as much as the behavior: a real
+  // `HighlighterCore` has to satisfy `ShikiHighlighter`, or the option is
+  // useless. It carries TypeScript and nothing else, so `json` comes back
+  // through the plain-text fallback — Shiki markup, but no per-token colors.
+  const highlighter = await createHighlighterCore({
+    langs: [ts],
+    themes: [githubDark],
+    engine: createJavaScriptRegexEngine(),
+  });
+
+  const highlighted = await render("```ts\nconst x: number = 1;\n```\n", {
+    shiki: { highlighter, theme: "github-dark" },
+  });
+  assertStringIncludes(highlighted, '<span style="color:');
+
+  const notCarried = await render("```json\n{}\n```\n", {
+    shiki: { highlighter, theme: "github-dark" },
+  });
+  assertStringIncludes(notCarried, "{}");
+  assertEquals(notCarried.includes('<span style="color:'), false);
 });
