@@ -12,9 +12,15 @@
  * // <h1 id="user-content-hello"><a href="#user-content-hello">Hello</a></h1>
  * ```
  *
- * Convert the resulting hast tree to whatever you need next with
- * {@linkcode hastToHtml}, {@linkcode hastToDom}, {@linkcode hastToReact}, or
- * {@linkcode hastToRemix}.
+ * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml}
+ * and {@linkcode hastToDom} are here, and the two that bind you to a UI framework
+ * live at their own entry points, so importing this module never puts one in your
+ * dependency graph.
+ *
+ * ```ts
+ * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts"; // pulls @remix-run/ui
+ * import { hastToReact } from "@kuboon/md/hast_to_react.ts"; // pulls react
+ * ```
  *
  * > [!IMPORTANT]
  * > Raw HTML in the Markdown input (`<script>`, `onerror=` attributes,
@@ -49,8 +55,6 @@ export {
 export { markdownSchema, mermaidSvgSchema, shikiSchema } from "./sanitize.ts";
 export { hastToDom, type HastToDomOptions } from "./hast_to_dom.ts";
 export { hastToHtml, type HastToHtmlOptions } from "./hast_to_html.ts";
-export { hastToRemix } from "./hast_to_remix.ts";
-export { hastToReact, type HastToReactOptions } from "./hast_to_react.ts";
 
 /** Options for {@linkcode markdownToHast}. */
 export interface MarkdownToHastOptions {
@@ -89,8 +93,8 @@ export interface MarkdownToHastOptions {
  *   code — is passed through `rehype-sanitize` before being returned.
  *
  * Convert the result yourself (e.g. with {@linkcode hastToHtml}) if you
- * need an HTML string, or with {@linkcode hastToDom}, {@linkcode
- * hastToReact}, {@linkcode hastToRemix} for other targets.
+ * need an HTML string, or with {@linkcode hastToDom}; `hastToReact` and
+ * `hastToRemix` are at their own entry points.
  *
  * @example
  * ```ts

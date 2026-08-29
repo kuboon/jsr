@@ -33,13 +33,17 @@
   ノードに変換（[`hast-util-to-dom`](https://github.com/syntax-tree/hast-util-to-dom)
   のラッパー）。ブラウザの `document`、または `options.document` 経由で渡した
   DOM 実装（`linkedom` など）を使う。
-- `hastToRemix(hast)` —
+- `hastToRemix(hast)`（`@kuboon/md/hast_to_remix.ts`）—
   [Remix UI](https://github.com/remix-run/remix/tree/main/packages/ui)
   の要素ツリー（`RemixNode`）に変換。`createRoot(...).render(...)`
   にそのまま渡せる。
-- `hastToReact(hast, options?)` — React
+- `hastToReact(hast, options?)`（`@kuboon/md/hast_to_react.ts`）— React
   の要素ツリーに変換（[`hast-util-to-jsx-runtime`](https://github.com/syntax-tree/hast-util-to-jsx-runtime)
   のラッパー）。`react-dom` などでそのままレンダリングできる。
+
+UI フレームワークに縛られる後ろ2つは、`@kuboon/md` 本体ではなく**それぞれの
+エントリポイント**にある。`@kuboon/md` を import しただけで使わない
+`@remix-run/ui` や `react` が依存グラフに入らないようにするため。
 
 ## インストール
 
@@ -74,13 +78,9 @@ const html = toHtml(hast);
 `@kuboon/md` が提供する変換関数を使う場合:
 
 ```ts ignore
-import {
-  hastToDom,
-  hastToHtml,
-  hastToReact,
-  hastToRemix,
-  markdownToHast,
-} from "@kuboon/md";
+import { hastToDom, hastToHtml, markdownToHast } from "@kuboon/md";
+import { hastToRemix } from "@kuboon/md/hast_to_remix.ts";
+import { hastToReact } from "@kuboon/md/hast_to_react.ts";
 
 const hast = await markdownToHast("# Hello");
 
@@ -153,9 +153,9 @@ const hast = await markdownToHast("# Hello", {
 - `hastToDom(hast, options?)` / `./hast_to_dom.ts` — hast を実 DOM
   ノードに変換する。
 - `hastToRemix(hast)` / `./hast_to_remix.ts` — hast を Remix UI の要素ツリーに
-  変換する。
+  変換する。**本体からは export されない**（`@remix-run/ui` を引くため）。
 - `hastToReact(hast, options?)` / `./hast_to_react.ts` — hast を React
-  の要素ツリーに変換する。
+  の要素ツリーに変換する。**本体からは export されない**（`react` を引くため）。
 
 ## Links
 
