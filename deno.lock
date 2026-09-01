@@ -5,7 +5,7 @@
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@std/ulid@1": "1.0.0",
     "npm:@libsql/client@~0.17.4": "0.17.4",
-    "npm:@remix-run/ui@0.7": "0.7.0",
+    "npm:@remix-run/ui@0.8": "0.8.0",
     "npm:@shikijs/langs@^4.4.3": "4.4.3",
     "npm:@shikijs/themes@^4.4.3": "4.4.3",
     "npm:@types/hast@^3.0.5": "3.0.5",
@@ -122,8 +122,8 @@
     "@neon-rs/load@0.0.4": {
       "integrity": "sha512-kTPhdZyTQxB+2wpiRcFWrDcejc4JI6tkPuS7UZCG4l6Zvc5kU/gGQ/ozvHTh1XR5tS+UlfAfGuPajjzQjCiHCw=="
     },
-    "@remix-run/ui@0.7.0": {
-      "integrity": "sha512-SPgbmHOnHAGxZiyJhW7wxGBnk7lYdY5GlYj1Chj5hpHH+3IAChpCcwUwniqbN8Wddwf6G4oitN/YhGFarqPIUg==",
+    "@remix-run/ui@0.8.0": {
+      "integrity": "sha512-4OdZ3oj0zbyVVaCFT/x2vjK5YxpD63KpLONkLZ2QVKIEBcLjJUGSenp2f08BOzC8oythLHCJgzHLKKulYJpIQA==",
       "dependencies": [
         "@types/dom-navigation"
       ]
@@ -1285,7 +1285,7 @@
       "md": {
         "dependencies": [
           "jsr:@std/assert@^1.0.19",
-          "npm:@remix-run/ui@0.7",
+          "npm:@remix-run/ui@0.8",
           "npm:@shikijs/langs@^4.4.3",
           "npm:@shikijs/themes@^4.4.3",
           "npm:@types/hast@^3.0.5",
