@@ -1,0 +1,25 @@
+{
+  "name": "@kuboon/onboarding-kit",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./element": "./src/element.ts"
+  },
+  "imports": {
+    "@std/testing/bdd": "jsr:@std/testing@^1/bdd",
+    "@std/expect": "jsr:@std/expect@^1"
+  },
+  "tasks": {
+    "test": "deno test --allow-read --allow-env",
+    "check": "deno check src"
+  },
+  "publish": {
+    "include": ["src", "schema.json", "README.md", "LICENSE", "deno.json"],
+    "exclude": ["**/*.test.ts"]
+  },
+  "compilerOptions": {
+    "lib": ["deno.ns", "dom", "dom.iterable", "esnext"]
+  }
+}
