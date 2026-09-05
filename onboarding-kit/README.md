@@ -34,27 +34,39 @@ version, in which case nothing is shown.
 Or drive it from JS with an already-parsed scenario:
 
 ```ts ignore
-import "@kuboon/onboarding-kit/element";
+import { createOnboardingTour } from "@kuboon/onboarding-kit/element";
 
-let el = document.createElement("onboarding-tour");
+let el = createOnboardingTour();
 document.body.append(el);
 el.scenario = await fetch("/tours/main.json").then((r) => r.json());
 ```
 
 Setting `.scenario` replaces any tour already running on the element and starts
-the new one. Setting it to `null` tears the tour down.
+the new one. Setting it to `null` tears the tour down. Append the element before
+setting a scenario: a tour that starts while its element is detached has nowhere
+to draw its first step.
+
+### Server-rendered apps
+
+Importing `@kuboon/onboarding-kit/element` registers `<onboarding-tour>` where
+there is a DOM and does nothing anywhere else, so a component file that is also
+evaluated during an SSG build or an SSR render can import it at the top like any
+other module. `defineOnboardingTour()` returns whether the element ended up
+registered; `createOnboardingTour()` throws where there is no DOM to create one
+in.
 
 ### Replaying a tour
 
+A "show me this again" button in your own chrome calls `start`:
+
 ```ts ignore
 let el = document.querySelector("onboarding-tour")!;
-await el.tour?.reset();
-el.setAttribute("force", "");
-el.scenario = el.scenario; // re-assign to restart
+await el.start({ force: true });
 ```
 
-Or skip the element's own store check entirely and drive the headless API
-directly — see below.
+`force` shows a tour the store has already recorded as done and leaves that
+record alone, so the tour still does not come back by itself on the next visit.
+Use `el.reset()` when it should.
 
 ## The scenario
 
@@ -102,7 +114,7 @@ directly — see below.
 | ---------- | ------------ | ------- | ---------------------------------------------------------------- |
 | `name`     | `string`     | —       | Required. Identifies the tour where completion is stored         |
 | `version`  | `integer`    | `1`     | Bump to show an edited tour again to people who finished the old |
-| `keyboard` | `boolean`    | `true`  | `→`/`Enter` next, `←` back, `Esc` skip                           |
+| `keyboard` | `boolean`    | `true`  | `→`/`Enter` next, `←` back, `Esc` skip; captured from the app    |
 | `labels`   | object       | English | `next`, `back`, `skip`, `done`, `progress`                       |
 | `defaults` | step options | —       | Applied to every step that does not override them                |
 | `steps`    | array        | —       | Required, non-empty                                              |
@@ -121,10 +133,11 @@ directly — see below.
 | `scrollIntoView`   | `boolean`             | `true`   | Scroll an off-screen target into view        |
 | `whenMissing`      | see below             | `skip`   | What to do when the selector matches nothing |
 
-`target` is a **CSS selector**. Prefer a `[data-tour="…"]` attribute you control
-over an `id`, which is a page-unique resource that may not be yours to spend. A
-`{x, y, width, height}` object points at a fixed rectangle in **viewport**
-coordinates instead.
+`target` is a **CSS selector**, and it may name any element — an `<svg>`, or a
+node inside one, as readily as a `<div>`. Prefer a `[data-tour="…"]` attribute
+you control over an `id`, which is a page-unique resource that may not be yours
+to spend. A `{x, y, width, height}` object points at a fixed rectangle in
+**viewport** coordinates instead.
 
 ### `whenMissing`
 
@@ -142,6 +155,19 @@ therefore states what should happen:
 
 `wait` surfaces as a real `waiting` status on the tour, so an overlay can say it
 is looking for something rather than appear frozen.
+
+A match that is not **rendered** — `display: none`, `visibility: hidden`, a
+collapsed `content-visibility` subtree — does not count as a match. A responsive
+app keeps both layouts' chrome in the DOM and hides one of them, so "the
+selector matched" and "there is something to point at" are different questions;
+without this a step spotlights a zero-sized rectangle in the corner of the
+screen.
+
+A step resolves to the **first rendered** element its selector matches, not
+simply the first one, so a single `[data-tour="tests"]` can sit on both a
+phone's bottom bar and a desktop's side rail and land on whichever is up. One
+scenario, one step count, either layout — which is what a scenario that does not
+know the component tree is for.
 
 ## What this package does not implement
 
@@ -205,6 +231,15 @@ The overlay's styles live in a `<style>` inside the element's own shadow root,
 so nothing leaks in or out and there is no stylesheet to import. It respects
 `prefers-color-scheme`. For a different look, build your own overlay against the
 headless API above.
+
+## Keyboard
+
+While a tour is up it listens in the capture phase and stops the keys it acts on
+— `→`/`Enter`, `←`, `Esc` — so they do not also reach the app underneath. The
+overlay is modal to the pointer, and an `Esc` that both skips the tour _and_
+clears the host app's selection is a tour that breaks the page behind it. Keys
+the tour does not act on travel on untouched. Set `keyboard: false` to bind
+nothing at all.
 
 ## Scope
 

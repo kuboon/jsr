@@ -185,6 +185,29 @@ describe("createTour", () => {
     expect(tour.state.step?.body).toBe("y");
   });
 
+  it("waiting carries the index of the step it is waiting for", async () => {
+    const tour = createTour(
+      scenario([{ target: A, body: "1" }, {
+        target: "#nowhere",
+        body: "2",
+        whenMissing: "wait",
+      }, { target: A, body: "3" }]),
+      { store: memoryTourStore(), waitTimeoutMs: 40 },
+    );
+
+    const waits: number[] = [];
+    tour.addEventListener("change", () => {
+      if (tour.state.status === "waiting") waits.push(tour.state.index);
+    });
+
+    await tour.start();
+    await tour.next();
+
+    // The progress counter reads this index, so leaving the previous step's number on a waiting
+    // state makes the overlay count wrong for as long as it is looking.
+    expect(waits).toEqual([1]);
+  });
+
   it("throws on a whenMissing:fail step", async () => {
     const tour = createTour(
       scenario([{ target: "#nowhere", body: "x", whenMissing: "fail" }]),
