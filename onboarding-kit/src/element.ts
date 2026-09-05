@@ -6,6 +6,10 @@
  * root, driven by the headless state machine in `lib/tour.ts`. One element, full-screen, no build
  * step required.
  *
+ * Importing this module registers the element wherever there is a DOM, and does nothing anywhere
+ * else, so a component file that is also evaluated on a server — an SSG build, an SSR render —
+ * can import it at the top like any other module.
+ *
  * @example
  * ```html ignore
  * <onboarding-tour src="/tours/main.json"></onboarding-tour>
@@ -13,9 +17,11 @@
  *
  * @example
  * ```ts ignore
- * import "@kuboon/onboarding-kit/element";
+ * import { createOnboardingTour } from "@kuboon/onboarding-kit/element";
  *
- * document.querySelector("onboarding-tour").scenario = await fetch("/tours/main.json").then((r) => r.json());
+ * let el = createOnboardingTour();
+ * document.body.append(el);
+ * el.scenario = scenario; // starts, unless this tour is already recorded as done
  * ```
  */
 
@@ -29,6 +35,9 @@ import type { TourScenario, TourStopReason } from "./lib/types.ts";
 import { parseScenario } from "./schema.ts";
 import { anchor } from "./lib/anchor.ts";
 import { trackRect } from "./lib/track.ts";
+
+/** The tag `defineOnboardingTour` registers unless it is given another one. */
+export const DEFAULT_TAG_NAME = "onboarding-tour";
 
 const DEFAULT_LABELS = {
   next: "Next",
@@ -85,227 +94,312 @@ button { border: 0; font: inherit; cursor: pointer; border-radius: 6px; }
 `;
 
 /**
- * A self-contained tour overlay. See the module doc for usage.
+ * A self-contained tour overlay: the element's own API on top of `HTMLElement`.
  *
- * Fires `tour-change` (a `CustomEvent<TourState>`) on every state transition, mirroring the
- * underlying {@link Tour}'s own `change` event.
+ * This is a type, not a class, because the class behind it cannot exist until there is an
+ * `HTMLElement` to extend — see {@link defineOnboardingTour}. Reach for `instanceof` through
+ * `customElements.get(DEFAULT_TAG_NAME)` if you need it.
+ *
+ * The element fires `tour-change` (a `CustomEvent<TourState>`) on every state transition,
+ * mirroring the underlying {@link Tour}'s own `change` event.
  */
-export class OnboardingTourElement extends HTMLElement {
-  #tour: Tour | null = null;
-  #rootEl: HTMLDivElement;
-  #backdropEl: HTMLDivElement;
-  #spotlightEl: HTMLDivElement;
-  #tooltipEl: HTMLDivElement;
-  #titleEl: HTMLParagraphElement;
-  #bodyEl: HTMLParagraphElement;
-  #progressEl: HTMLSpanElement;
-  #skipButton: HTMLButtonElement;
-  #backButton: HTMLButtonElement;
-  #nextButton: HTMLButtonElement;
-  #detachAnchor: (() => void) | null = null;
-  #detachTrack: (() => void) | null = null;
-
-  constructor() {
-    super();
-    const root = this.attachShadow({ mode: "open" });
-
-    const style = document.createElement("style");
-    style.textContent = STYLE;
-
-    this.#rootEl = document.createElement("div");
-    this.#rootEl.className = "root";
-    this.#rootEl.hidden = true;
-
-    this.#backdropEl = document.createElement("div");
-    this.#backdropEl.className = "backdrop";
-
-    this.#spotlightEl = document.createElement("div");
-    this.#spotlightEl.className = "spotlight";
-    this.#spotlightEl.hidden = true;
-
-    this.#tooltipEl = document.createElement("div");
-    this.#tooltipEl.className = "tooltip";
-    this.#tooltipEl.setAttribute("popover", "manual");
-    this.#tooltipEl.setAttribute("role", "dialog");
-    this.#tooltipEl.setAttribute("aria-live", "polite");
-
-    this.#titleEl = document.createElement("p");
-    this.#titleEl.className = "title";
-    this.#bodyEl = document.createElement("p");
-    this.#bodyEl.className = "body";
-
-    const footer = document.createElement("div");
-    footer.className = "footer";
-    this.#progressEl = document.createElement("span");
-    this.#progressEl.className = "progress";
-
-    const actions = document.createElement("div");
-    actions.className = "actions";
-    this.#skipButton = document.createElement("button");
-    this.#skipButton.type = "button";
-    this.#skipButton.className = "ghost";
-    this.#skipButton.addEventListener("click", () => void this.stop("skip"));
-    this.#backButton = document.createElement("button");
-    this.#backButton.type = "button";
-    this.#backButton.className = "ghost";
-    this.#backButton.addEventListener("click", () => void this.back());
-    this.#nextButton = document.createElement("button");
-    this.#nextButton.type = "button";
-    this.#nextButton.className = "primary";
-    this.#nextButton.addEventListener("click", () => {
-      const state = this.#tour?.state;
-      if (state === undefined) return;
-      void (state.index >= state.total - 1
-        ? this.stop("complete")
-        : this.next());
-    });
-    actions.append(this.#skipButton, this.#backButton, this.#nextButton);
-    footer.append(this.#progressEl, actions);
-
-    this.#tooltipEl.append(this.#titleEl, this.#bodyEl, footer);
-    this.#rootEl.append(this.#backdropEl, this.#spotlightEl, this.#tooltipEl);
-    root.append(style, this.#rootEl);
-  }
-
-  connectedCallback(): void {
-    const src = this.getAttribute("src");
-    if (src !== null && this.#tour === null) void this.#loadFrom(src);
-  }
-
-  disconnectedCallback(): void {
-    this.#clearPositioning();
-    this.#tour?.dispose();
-  }
-
-  async #loadFrom(url: string): Promise<void> {
-    const response = await fetch(url);
-    this.scenario = parseScenario(await response.json());
-  }
-
-  /** The active tour's scenario, or `null` before one is set. */
-  get scenario(): TourScenario | null {
-    return this.#tour?.scenario ?? null;
-  }
-
-  /** Replaces the running tour with a new one built from this scenario, and starts it. */
-  set scenario(value: TourScenario | null) {
-    this.#clearPositioning();
-    this.#tour?.dispose();
-    this.#tour = value === null ? null : createTour(value);
-
-    if (this.#tour !== null) {
-      const tour = this.#tour;
-      tour.addEventListener("change", () => {
-        this.#sync();
-        this.dispatchEvent(
-          new CustomEvent("tour-change", { detail: tour.state }),
-        );
-      });
-      void tour.start({ force: this.hasAttribute("force") });
-    }
-    this.#sync();
-  }
-
+export interface OnboardingTourElement extends HTMLElement {
+  /**
+   * The active tour's scenario, or `null` before one is set.
+   *
+   * Assigning replaces any tour already running on the element and starts the new one — unless the
+   * store says this tour, at this version, is already done. Assigning `null` tears it down.
+   */
+  scenario: TourScenario | null;
   /** The underlying headless {@link Tour}, for direct access to its full API and `state`. */
-  get tour(): Tour | null {
-    return this.#tour;
-  }
+  readonly tour: Tour | null;
+  /**
+   * (Re)starts the current scenario from its first resolvable step.
+   *
+   * `force` shows a tour the store has already recorded as done, which is what a "show me this
+   * again" control in the app's own chrome needs — and it leaves the record alone, so the tour
+   * still does not come back by itself on the next visit. Use {@link reset} for that.
+   */
+  start(options?: { force?: boolean }): Promise<void>;
+  next(): Promise<void>;
+  back(): Promise<void>;
+  goto(id: string): Promise<void>;
+  stop(reason: TourStopReason): Promise<void>;
+  /** Forgets that this tour was completed, so it auto-starts again. */
+  reset(): Promise<void>;
+}
 
-  next(): Promise<void> {
-    return this.#tour?.next() ?? Promise.resolve();
-  }
+/** Built once, on the first {@link defineOnboardingTour} call in a DOM. */
+let elementClass: (new () => OnboardingTourElement) | undefined;
 
-  back(): Promise<void> {
-    return this.#tour?.back() ?? Promise.resolve();
-  }
+function buildElementClass(): new () => OnboardingTourElement {
+  if (elementClass !== undefined) return elementClass;
 
-  goto(id: string): Promise<void> {
-    return this.#tour?.goto(id) ?? Promise.resolve();
-  }
+  elementClass = class extends HTMLElement implements OnboardingTourElement {
+    #tour: Tour | null = null;
+    #rootEl: HTMLDivElement;
+    #backdropEl: HTMLDivElement;
+    #spotlightEl: HTMLDivElement;
+    #tooltipEl: HTMLDivElement;
+    #titleEl: HTMLParagraphElement;
+    #bodyEl: HTMLParagraphElement;
+    #progressEl: HTMLSpanElement;
+    #skipButton: HTMLButtonElement;
+    #backButton: HTMLButtonElement;
+    #nextButton: HTMLButtonElement;
+    #detachAnchor: (() => void) | null = null;
+    #detachTrack: (() => void) | null = null;
 
-  stop(reason: TourStopReason): Promise<void> {
-    return this.#tour?.stop(reason) ?? Promise.resolve();
-  }
+    constructor() {
+      super();
+      const root = this.attachShadow({ mode: "open" });
 
-  reset(): Promise<void> {
-    return this.#tour?.reset() ?? Promise.resolve();
-  }
+      const style = document.createElement("style");
+      style.textContent = STYLE;
 
-  #clearPositioning(): void {
-    this.#detachAnchor?.();
-    this.#detachAnchor = null;
-    this.#detachTrack?.();
-    this.#detachTrack = null;
-  }
-
-  #sync(): void {
-    this.#clearPositioning();
-
-    const tour = this.#tour;
-    if (tour === null) {
+      this.#rootEl = document.createElement("div");
+      this.#rootEl.className = "root";
       this.#rootEl.hidden = true;
-      hidePopover(this.#tooltipEl);
-      return;
-    }
 
-    const { status, step, index, total, target } = tour.state;
-    const visible = isTourVisible(status) && step !== null;
+      this.#backdropEl = document.createElement("div");
+      this.#backdropEl.className = "backdrop";
 
-    this.#rootEl.hidden = !visible;
-    this.#rootEl.setAttribute("data-tour", tour.scenario.name);
-    this.#rootEl.setAttribute("data-tour-status", status);
+      this.#spotlightEl = document.createElement("div");
+      this.#spotlightEl.className = "spotlight";
+      this.#spotlightEl.hidden = true;
 
-    if (!visible || step === null) {
-      hidePopover(this.#tooltipEl);
-      return;
-    }
+      this.#tooltipEl = document.createElement("div");
+      this.#tooltipEl.className = "tooltip";
+      this.#tooltipEl.setAttribute("popover", "manual");
+      this.#tooltipEl.setAttribute("role", "dialog");
+      this.#tooltipEl.setAttribute("aria-live", "polite");
 
-    const options = resolveStepOptions(tour.scenario, step);
-    const labels = { ...DEFAULT_LABELS, ...tour.scenario.labels };
-    const isLast = index >= total - 1;
-    // Either the spotlight's ring-shaped shadow dims the page, or — when there is nothing to cut
-    // out — the backdrop does it itself. Never both, or the overlap reads as two different greys.
-    const spotlit = options.spotlight && target !== null;
+      this.#titleEl = document.createElement("p");
+      this.#titleEl.className = "title";
+      this.#bodyEl = document.createElement("p");
+      this.#bodyEl.className = "body";
 
-    this.#backdropEl.classList.toggle("dim", !spotlit);
-    this.#spotlightEl.hidden = !spotlit;
+      const footer = document.createElement("div");
+      footer.className = "footer";
+      this.#progressEl = document.createElement("span");
+      this.#progressEl.className = "progress";
 
-    this.#titleEl.hidden = step.title === undefined;
-    this.#titleEl.textContent = step.title ?? "";
-    this.#bodyEl.hidden = step.body === undefined;
-    this.#bodyEl.textContent = step.body ?? "";
-    this.#progressEl.textContent = labels.progress
-      .replace("{index}", String(index + 1))
-      .replace("{total}", String(total));
-    this.#skipButton.textContent = labels.skip;
-    this.#backButton.textContent = labels.back;
-    this.#backButton.disabled = index <= 0;
-    this.#nextButton.textContent = isLast ? labels.done : labels.next;
-
-    showPopover(this.#tooltipEl);
-
-    if (target === null) {
-      centerFloating(this.#tooltipEl);
-      return;
-    }
-
-    this.#tooltipEl.style.transform = "";
-    this.#detachAnchor = anchor(this.#tooltipEl, target, {
-      placement: options.placement,
-      offset: options.offset,
-    });
-
-    if (spotlit) {
-      const spotlightEl = this.#spotlightEl;
-      const pad = options.spotlightPadding;
-      this.#detachTrack = trackRect(target, (rect) => {
-        spotlightEl.style.top = `${rect.top - pad}px`;
-        spotlightEl.style.left = `${rect.left - pad}px`;
-        spotlightEl.style.width = `${rect.width + pad * 2}px`;
-        spotlightEl.style.height = `${rect.height + pad * 2}px`;
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      this.#skipButton = document.createElement("button");
+      this.#skipButton.type = "button";
+      this.#skipButton.className = "ghost";
+      this.#skipButton.addEventListener("click", () => void this.stop("skip"));
+      this.#backButton = document.createElement("button");
+      this.#backButton.type = "button";
+      this.#backButton.className = "ghost";
+      this.#backButton.addEventListener("click", () => void this.back());
+      this.#nextButton = document.createElement("button");
+      this.#nextButton.type = "button";
+      this.#nextButton.className = "primary";
+      this.#nextButton.addEventListener("click", () => {
+        const state = this.#tour?.state;
+        if (state === undefined) return;
+        void (state.index >= state.total - 1
+          ? this.stop("complete")
+          : this.next());
       });
+      actions.append(this.#skipButton, this.#backButton, this.#nextButton);
+      footer.append(this.#progressEl, actions);
+
+      this.#tooltipEl.append(this.#titleEl, this.#bodyEl, footer);
+      this.#rootEl.append(this.#backdropEl, this.#spotlightEl, this.#tooltipEl);
+      root.append(style, this.#rootEl);
     }
+
+    connectedCallback(): void {
+      const src = this.getAttribute("src");
+      if (src !== null && this.#tour === null) void this.#loadFrom(src);
+    }
+
+    disconnectedCallback(): void {
+      this.#clearPositioning();
+      this.#tour?.dispose();
+    }
+
+    async #loadFrom(url: string): Promise<void> {
+      const response = await fetch(url);
+      this.scenario = parseScenario(await response.json());
+    }
+
+    get scenario(): TourScenario | null {
+      return this.#tour?.scenario ?? null;
+    }
+
+    set scenario(value: TourScenario | null) {
+      this.#clearPositioning();
+      this.#tour?.dispose();
+      this.#tour = value === null ? null : createTour(value);
+
+      if (this.#tour !== null) {
+        const tour = this.#tour;
+        tour.addEventListener("change", () => {
+          this.#sync();
+          this.dispatchEvent(
+            new CustomEvent("tour-change", { detail: tour.state }),
+          );
+        });
+        void tour.start({ force: this.hasAttribute("force") });
+      }
+      this.#sync();
+    }
+
+    get tour(): Tour | null {
+      return this.#tour;
+    }
+
+    start(options?: { force?: boolean }): Promise<void> {
+      return this.#tour?.start(options) ?? Promise.resolve();
+    }
+
+    next(): Promise<void> {
+      return this.#tour?.next() ?? Promise.resolve();
+    }
+
+    back(): Promise<void> {
+      return this.#tour?.back() ?? Promise.resolve();
+    }
+
+    goto(id: string): Promise<void> {
+      return this.#tour?.goto(id) ?? Promise.resolve();
+    }
+
+    stop(reason: TourStopReason): Promise<void> {
+      return this.#tour?.stop(reason) ?? Promise.resolve();
+    }
+
+    reset(): Promise<void> {
+      return this.#tour?.reset() ?? Promise.resolve();
+    }
+
+    #clearPositioning(): void {
+      this.#detachAnchor?.();
+      this.#detachAnchor = null;
+      this.#detachTrack?.();
+      this.#detachTrack = null;
+    }
+
+    #sync(): void {
+      this.#clearPositioning();
+
+      const tour = this.#tour;
+      if (tour === null) {
+        this.#rootEl.hidden = true;
+        hidePopover(this.#tooltipEl);
+        return;
+      }
+
+      const { status, step, index, total, target } = tour.state;
+      const visible = isTourVisible(status) && step !== null;
+
+      this.#rootEl.hidden = !visible;
+      this.#rootEl.setAttribute("data-tour", tour.scenario.name);
+      this.#rootEl.setAttribute("data-tour-status", status);
+
+      if (!visible || step === null) {
+        hidePopover(this.#tooltipEl);
+        return;
+      }
+
+      const options = resolveStepOptions(tour.scenario, step);
+      const labels = { ...DEFAULT_LABELS, ...tour.scenario.labels };
+      const isLast = index >= total - 1;
+      // Either the spotlight's ring-shaped shadow dims the page, or — when there is nothing to cut
+      // out — the backdrop does it itself. Never both, or the overlap reads as two different greys.
+      const spotlit = options.spotlight && target !== null;
+
+      this.#backdropEl.classList.toggle("dim", !spotlit);
+      this.#spotlightEl.hidden = !spotlit;
+
+      this.#titleEl.hidden = step.title === undefined;
+      this.#titleEl.textContent = step.title ?? "";
+      this.#bodyEl.hidden = step.body === undefined;
+      this.#bodyEl.textContent = step.body ?? "";
+      this.#progressEl.textContent = labels.progress
+        .replace("{index}", String(index + 1))
+        .replace("{total}", String(total));
+      this.#skipButton.textContent = labels.skip;
+      this.#backButton.textContent = labels.back;
+      this.#backButton.disabled = index <= 0;
+      this.#nextButton.textContent = isLast ? labels.done : labels.next;
+
+      showPopover(this.#tooltipEl);
+
+      if (target === null) {
+        centerFloating(this.#tooltipEl);
+        return;
+      }
+
+      this.#tooltipEl.style.transform = "";
+      this.#detachAnchor = anchor(this.#tooltipEl, target, {
+        placement: options.placement,
+        offset: options.offset,
+      });
+
+      if (spotlit) {
+        const spotlightEl = this.#spotlightEl;
+        const pad = options.spotlightPadding;
+        this.#detachTrack = trackRect(target, (rect) => {
+          spotlightEl.style.top = `${rect.top - pad}px`;
+          spotlightEl.style.left = `${rect.left - pad}px`;
+          spotlightEl.style.width = `${rect.width + pad * 2}px`;
+          spotlightEl.style.height = `${rect.height + pad * 2}px`;
+        });
+      }
+    }
+  };
+
+  return elementClass;
+}
+
+/**
+ * Registers the custom element, if there is a DOM to register it in.
+ *
+ * Importing this module already calls this once, so most apps never need it; it is here for the
+ * app that wants the overlay under a second tag name, and it is what makes the import itself safe
+ * on a server. Calling it repeatedly, or where the tag is already taken, does nothing.
+ *
+ * @param tagName Tag to register. Defaults to {@link DEFAULT_TAG_NAME}
+ * @returns Whether the element is registered under that name when this returns
+ */
+export function defineOnboardingTour(
+  tagName: string = DEFAULT_TAG_NAME,
+): boolean {
+  if (
+    typeof customElements === "undefined" || typeof HTMLElement === "undefined"
+  ) {
+    return false;
   }
+  if (customElements.get(tagName) === undefined) {
+    customElements.define(tagName, buildElementClass());
+  }
+  return true;
+}
+
+/**
+ * Creates an `<onboarding-tour>`, registering the element first if it is not already.
+ *
+ * Append it before setting `.scenario`: a tour that starts while its element is detached has
+ * nowhere to draw its first step.
+ *
+ * @param tagName Tag to create. Defaults to {@link DEFAULT_TAG_NAME}
+ * @returns The new element
+ * @throws {Error} When there is no DOM to create it in
+ */
+export function createOnboardingTour(
+  tagName: string = DEFAULT_TAG_NAME,
+): OnboardingTourElement {
+  if (!defineOnboardingTour(tagName)) {
+    throw new Error(
+      `createOnboardingTour("${tagName}") needs a DOM; there is no customElements here`,
+    );
+  }
+  return document.createElement(tagName) as OnboardingTourElement;
 }
 
 /** Puts the tooltip in the middle of the viewport, undoing whatever `anchor()` left behind. */
@@ -333,6 +427,4 @@ function hidePopover(element: HTMLElement): void {
   }
 }
 
-if (!customElements.get("onboarding-tour")) {
-  customElements.define("onboarding-tour", OnboardingTourElement);
-}
+defineOnboardingTour();

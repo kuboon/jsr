@@ -16,7 +16,7 @@ import type {
   TourTarget,
 } from "./types.ts";
 import { localStorageTourStore, type TourStore } from "./store.ts";
-import { isElement } from "./dom.ts";
+import { isElement, isRendered } from "./dom.ts";
 
 /** Events a tour dispatches. `change` fires on every state transition. */
 export type TourEventMap = {
@@ -202,7 +202,7 @@ class TourController extends TypedEventTarget<TourEventMap> implements Tour {
 
     while (index >= 0 && index < steps.length) {
       const step = steps[index];
-      const resolved = await this.#resolve(step, generation);
+      const resolved = await this.#resolve(step, index, generation);
       if (generation !== this.#generation) return;
 
       if (resolved !== "missing") {
@@ -233,6 +233,7 @@ class TourController extends TypedEventTarget<TourEventMap> implements Tour {
    */
   async #resolve(
     step: TourStep,
+    index: number,
     generation: number,
   ): Promise<TourTarget | null | "missing"> {
     if (step.target === undefined) return null;
@@ -243,7 +244,7 @@ class TourController extends TypedEventTarget<TourEventMap> implements Tour {
     const { whenMissing } = resolveStepOptions(this.scenario, step);
 
     if (found === null && whenMissing === "wait") {
-      this.#patch({ status: "waiting", step, target: null });
+      this.#patch({ status: "waiting", index, step, target: null });
       const deadline = Date.now() + this.#waitTimeoutMs;
       while (found === null && Date.now() < deadline) {
         await new Promise((resolve) => setTimeout(resolve, WAIT_POLL_MS));
@@ -256,11 +257,12 @@ class TourController extends TypedEventTarget<TourEventMap> implements Tour {
     return whenMissing === "center" ? null : "missing";
   }
 
+  /** Finds a *rendered* element for the selector. A hidden match is a miss — see {@link isRendered}. */
   #query(selector: string): HTMLElement | null {
     if (this.#document === undefined) return null;
     try {
       const found = this.#document.querySelector(selector);
-      return isElement(found) ? found : null;
+      return isElement(found) && isRendered(found) ? found : null;
     } catch {
       // An invalid selector is an authoring bug in the JSON, not a reason to throw at the visitor.
       return null;
@@ -284,6 +286,15 @@ class TourController extends TypedEventTarget<TourEventMap> implements Tour {
     this.dispatchEvent(new Event("change"));
   }
 
+  /**
+   * Binds the tour's own keys.
+   *
+   * Listening in the *capture* phase and stopping the keys it acts on is what makes the overlay
+   * modal to the keyboard as well as to the pointer: the app underneath has its own Escape and its
+   * own arrow keys, and a tour that dims the page but still lets Escape clear the host app's
+   * selection is a tour that breaks the page behind it. Keys the tour does not act on travel on
+   * untouched.
+   */
   #bindKeys(): void {
     if (this.scenario.keyboard === false || this.#keys !== null) return;
     const target = this.#document?.defaultView ?? globalThis;
@@ -294,17 +305,19 @@ class TourController extends TypedEventTarget<TourEventMap> implements Tour {
       if (!(event instanceof KeyboardEvent)) return;
       if (!isTourVisible(this.#state.status)) return;
 
-      if (event.key === "ArrowRight" || event.key === "Enter") {
-        event.preventDefault();
-        void this.next();
-      } else if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        void this.back();
-      } else if (event.key === "Escape") {
-        event.preventDefault();
-        void this.stop("skip");
-      }
-    }, { signal: this.#keys.signal });
+      const act = event.key === "ArrowRight" || event.key === "Enter"
+        ? () => this.next()
+        : event.key === "ArrowLeft"
+        ? () => this.back()
+        : event.key === "Escape"
+        ? () => this.stop("skip")
+        : undefined;
+      if (act === undefined) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      void act();
+    }, { signal: this.#keys.signal, capture: true });
   }
 
   #unbindKeys(): void {
