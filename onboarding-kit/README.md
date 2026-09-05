@@ -133,10 +133,11 @@ Use `el.reset()` when it should.
 | `scrollIntoView`   | `boolean`             | `true`   | Scroll an off-screen target into view        |
 | `whenMissing`      | see below             | `skip`   | What to do when the selector matches nothing |
 
-`target` is a **CSS selector**. Prefer a `[data-tour="…"]` attribute you control
-over an `id`, which is a page-unique resource that may not be yours to spend. A
-`{x, y, width, height}` object points at a fixed rectangle in **viewport**
-coordinates instead.
+`target` is a **CSS selector**, and it may name any element — an `<svg>`, or a
+node inside one, as readily as a `<div>`. Prefer a `[data-tour="…"]` attribute
+you control over an `id`, which is a page-unique resource that may not be yours
+to spend. A `{x, y, width, height}` object points at a fixed rectangle in
+**viewport** coordinates instead.
 
 ### `whenMissing`
 
@@ -156,12 +157,17 @@ therefore states what should happen:
 is looking for something rather than appear frozen.
 
 A match that is not **rendered** — `display: none`, `visibility: hidden`, a
-collapsed `content-visibility` subtree — counts as missing too. A responsive app
-keeps both layouts' chrome in the DOM and hides one of them, so "the selector
-matched" and "there is something to point at" are different questions; without
-this a step spotlights a zero-sized rectangle in the corner of the screen. One
-scenario can therefore name a phone's bottom bar and a desktop's side rail as
-two `skip` steps and stay correct in either layout.
+collapsed `content-visibility` subtree — does not count as a match. A responsive
+app keeps both layouts' chrome in the DOM and hides one of them, so "the
+selector matched" and "there is something to point at" are different questions;
+without this a step spotlights a zero-sized rectangle in the corner of the
+screen.
+
+A step resolves to the **first rendered** element its selector matches, not
+simply the first one, so a single `[data-tour="tests"]` can sit on both a
+phone's bottom bar and a desktop's side rail and land on whichever is up. One
+scenario, one step count, either layout — which is what a scenario that does not
+know the component tree is for.
 
 ## What this package does not implement
 

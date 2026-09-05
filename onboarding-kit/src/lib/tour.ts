@@ -257,12 +257,22 @@ class TourController extends TypedEventTarget<TourEventMap> implements Tour {
     return whenMissing === "center" ? null : "missing";
   }
 
-  /** Finds a *rendered* element for the selector. A hidden match is a miss — see {@link isRendered}. */
-  #query(selector: string): HTMLElement | null {
+  /**
+   * Finds the first *rendered* element the selector matches.
+   *
+   * Not the first match: a responsive app says the same thing twice, in a phone's bottom bar and
+   * in a desktop's side rail, and hides whichever one is not this layout's. Skipping past the
+   * hidden ones is what lets a single `[data-tour="tests"]` name both and resolve to the one that
+   * is actually on screen — which is the whole point of a scenario that does not know the
+   * component tree. See {@link isRendered}.
+   */
+  #query(selector: string): Element | null {
     if (this.#document === undefined) return null;
     try {
-      const found = this.#document.querySelector(selector);
-      return isElement(found) && isRendered(found) ? found : null;
+      for (const found of this.#document.querySelectorAll(selector)) {
+        if (isElement(found) && isRendered(found)) return found;
+      }
+      return null;
     } catch {
       // An invalid selector is an authoring bug in the JSON, not a reason to throw at the visitor.
       return null;
@@ -327,7 +337,7 @@ class TourController extends TypedEventTarget<TourEventMap> implements Tour {
 }
 
 /** True when the whole element is already inside the viewport, so there is nothing to scroll. */
-function isFullyVisible(element: HTMLElement): boolean {
+function isFullyVisible(element: Element): boolean {
   const rect = element.getBoundingClientRect();
   return rect.top >= 0 &&
     rect.left >= 0 &&

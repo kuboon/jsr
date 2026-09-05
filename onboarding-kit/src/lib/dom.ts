@@ -6,9 +6,16 @@
  * bare check would throw a ReferenceError rather than return false.
  */
 
-/** True when the value is a live element rather than a fixed rectangle or nothing at all. */
-export function isElement(value: unknown): value is HTMLElement {
-  return typeof HTMLElement !== "undefined" && value instanceof HTMLElement;
+/**
+ * True when the value is a live element rather than a fixed rectangle or nothing at all.
+ *
+ * `Element`, not `HTMLElement`: a tour points at whatever is on the page, and plenty of pages draw
+ * the interesting part — a chart, a diagram, a game board — in SVG. Everything the kit asks of a
+ * target (`getBoundingClientRect`, `getClientRects`, `checkVisibility`, `scrollIntoView`) is
+ * `Element`'s, so narrowing to HTML only ever excluded targets that would have worked.
+ */
+export function isElement(value: unknown): value is Element {
+  return typeof Element !== "undefined" && value instanceof Element;
 }
 
 /**
@@ -23,7 +30,7 @@ export function isElement(value: unknown): value is HTMLElement {
  * So an unrendered match counts as a miss, and the step's `whenMissing` decides what happens
  * next. That is what lets one scenario name both layouts and stay correct in either.
  */
-export function isRendered(element: HTMLElement): boolean {
+export function isRendered(element: Element): boolean {
   if (typeof element.checkVisibility === "function") {
     return element.checkVisibility({
       contentVisibilityAuto: true,

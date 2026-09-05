@@ -130,8 +130,12 @@ export type TourStatus =
   | "completed"
   | "skipped";
 
-/** A resolved target: a live element, or a fixed viewport rectangle. */
-export type TourTarget = HTMLElement | TourPoint;
+/**
+ * A resolved target: a live element, or a fixed viewport rectangle.
+ *
+ * Any `Element` — an `<svg>` or a node inside one is a perfectly ordinary thing to point at.
+ */
+export type TourTarget = Element | TourPoint;
 
 /** Snapshot of a tour, as read from {@link Tour.state}. */
 export type TourState = {

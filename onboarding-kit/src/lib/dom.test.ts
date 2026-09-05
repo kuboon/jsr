@@ -7,12 +7,12 @@ import { isElement, isRendered } from "./dom.ts";
  * says no rather than throwing, and that `isRendered` asks the element the right question. The
  * element itself is a stand-in — both branches only ever call methods, never construct anything.
  */
-function stub(shape: Partial<HTMLElement>): HTMLElement {
-  return shape as HTMLElement;
+function stub(shape: Partial<Element>): Element {
+  return shape as Element;
 }
 
 describe("isElement", () => {
-  it("is false, not a ReferenceError, where HTMLElement does not exist", () => {
+  it("is false, not a ReferenceError, where Element does not exist", () => {
     expect(isElement(stub({}))).toBe(false);
     expect(isElement(null)).toBe(false);
   });
