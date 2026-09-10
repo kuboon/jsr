@@ -1340,6 +1340,11 @@
           "jsr:@std/expect@1",
           "jsr:@std/testing@1"
         ]
+      },
+      "qrcode-gen": {
+        "dependencies": [
+          "jsr:@std/assert@^1.0.19"
+        ]
       }
     }
   }
