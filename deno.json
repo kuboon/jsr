@@ -1,5 +1,11 @@
 {
-  "workspace": ["./kv", "./md", "./file-server-behavior", "./onboarding-kit"],
+  "workspace": [
+    "./kv",
+    "./md",
+    "./file-server-behavior",
+    "./onboarding-kit",
+    "./qrcode-gen"
+  ],
   "tasks": {
     "test": "deno test --allow-read --allow-env --allow-net"
   }
