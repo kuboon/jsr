@@ -10,7 +10,7 @@ caller, unlike most QR libraries that bundle a renderer.
 import { Qrcode } from "@kuboon/qrcode-gen";
 
 const qr = new Qrcode("https://example.com", { type: "model2" });
-const modules = qr.toJSON(); // boolean[][], [row][column], true = dark module
+const { size, matrix } = qr.toJSON(); // size: module count per side; matrix[row][col], true = dark
 ```
 
 `type` and `size` are both optional:

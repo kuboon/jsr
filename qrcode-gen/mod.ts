@@ -9,7 +9,7 @@
  * import { Qrcode } from "@kuboon/qrcode-gen";
  *
  * const qr = new Qrcode("https://example.com", { type: "model2" });
- * const modules = qr.toJSON(); // boolean[][], true = dark module
+ * const { size, matrix } = qr.toJSON(); // size: module count per side; matrix[row][col], true = dark
  * ```
  */
 
@@ -19,6 +19,14 @@ import { buildMatrix } from "./matrix.ts";
 
 /** The QR variant to encode as. Only `"model2"` is implemented; `"rMQR"` is planned. */
 export type QrcodeType = "model2";
+
+/** The shape returned by {@link Qrcode.toJSON}. */
+export type QrcodeJSON = {
+  /** The module grid's width and height, in modules. */
+  size: number;
+  /** The module grid, `[row][column]`, `true` for a dark module. */
+  matrix: boolean[][];
+};
 
 /** Options for {@link Qrcode}. */
 export type QrcodeOptions = {
@@ -63,8 +71,10 @@ export class Qrcode {
     this.#modules = buildMatrix(this.version, allCodewords);
   }
 
-  /** The module grid, `[row][column]`, `true` for a dark module. */
-  toJSON(): boolean[][] {
-    return this.#modules.map((row) => row.slice());
+  toJSON(): QrcodeJSON {
+    return {
+      size: this.#modules.length,
+      matrix: this.#modules.map((row) => row.slice()),
+    };
   }
 }
