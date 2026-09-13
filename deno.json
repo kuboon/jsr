@@ -4,9 +4,10 @@
     "./md",
     "./file-server-behavior",
     "./onboarding-kit",
-    "./qrcode-gen"
+    "./qrcode-gen",
+    "./tailwindcss-deno"
   ],
   "tasks": {
-    "test": "deno test --allow-read --allow-env --allow-net"
+    "test": "deno test --allow-read --allow-env --allow-net --allow-sys --allow-ffi"
   }
 }
