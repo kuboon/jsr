@@ -5,7 +5,8 @@
     "./file-server-behavior",
     "./onboarding-kit",
     "./qrcode-gen",
-    "./tailwindcss-deno"
+    "./tailwindcss-deno",
+    "./share-element"
   ],
   "tasks": {
     "test": "deno test --allow-read --allow-env --allow-net --allow-sys --allow-ffi"

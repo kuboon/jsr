@@ -1479,6 +1479,11 @@
           "jsr:@std/assert@^1.0.19"
         ]
       },
+      "share-element": {
+        "dependencies": [
+          "jsr:@std/assert@^1.0.19"
+        ]
+      },
       "tailwindcss-deno": {
         "dependencies": [
           "jsr:@deno/loader@0.5",

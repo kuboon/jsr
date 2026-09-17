@@ -14,6 +14,7 @@
 | [@kuboon/onboarding-kit](https://jsr.io/@kuboon/onboarding-kit)             | [`onboarding-kit/`](./onboarding-kit)             | JSON シナリオで動く、フレームワーク非依存のプロダクトツアー用カスタムエレメント |
 | [@kuboon/qrcode-gen](https://jsr.io/@kuboon/qrcode-gen)                     | [`qrcode-gen/`](./qrcode-gen)                     | ゼロ依存の QR コードエンコーダ(モジュール配列を返すのみ)                        |
 | [@kuboon/tailwindcss-deno](https://jsr.io/@kuboon/tailwindcss-deno)         | [`tailwindcss-deno/`](./tailwindcss-deno)         | Tailwind CSS v4 を Deno で動かす `@tailwindcss/node` 相当                       |
+| [@kuboon/share-element](https://jsr.io/@kuboon/share-element)               | [`share-element/`](./share-element)               | X/LINE/Threads 等のシェアボタンを備えたカスタムダイアログエレメント             |
 
 ## 開発
 
