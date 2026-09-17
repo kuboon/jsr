@@ -56,6 +56,14 @@ Four buttons, always in this order:
    sheet with `{ url }`. **Copy URL** (otherwise) — copies the URL to the
    clipboard, and briefly relabels itself to confirm it worked.
 
+The URL always ends up somewhere the reader can use it. If the platform refuses
+to open the share sheet at all — no registered target, an insecure context, a
+gesture the browser did not count — the button copies to the clipboard instead,
+and relabels itself the same way. If the clipboard refuses too, it says so
+rather than looking like it worked. The one rejection that is _not_ treated as a
+failure is the reader closing the share sheet: that is an answer, and copying
+behind their back would be the wrong thing to do.
+
 The X/LINE/Threads URL builders (`xShareUrl`, `lineShareUrl`, `threadsShareUrl`)
 are also exported directly, in case you want to build your own links instead of
 using the panel.
@@ -79,6 +87,12 @@ Any rule targeting these classes overrides the defaults without `!important` —
 `:where()` carries zero specificity, so even a bare
 `.share-dialog__button { ... }` in your stylesheet wins.
 
+**With one catch, if you use cascade layers.** The defaults are injected as a
+plain `<style>` with no layer, and unlayered CSS outranks _every_ `@layer`
+whatever the specificity — so a rule in `@layer app` loses to
+`:where(.share-dialog)` even though `:where()` counts for nothing. Write your
+overrides unlayered as well.
+
 Labels are overridable too, via `.labels`:
 
 ```ts ignore
@@ -86,6 +100,7 @@ share.labels = {
   share: "共有",
   copy: "URLをコピー",
   copied: "コピーしました",
+  copyFailed: "コピーできませんでした",
   close: "閉じる",
 };
 ```
