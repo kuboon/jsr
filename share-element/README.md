@@ -2,7 +2,7 @@
 
 A row of share buttons as a single custom element: `<share-buttons>` — X, LINE
 and Threads, plus a native share-sheet button (where the Web Share API exists)
-or a "copy URL" fallback where it doesn't.
+or a "copy URL" fallback where it doesn't — never both.
 
 All four are monochrome icons drawn in `currentColor`, so they take whatever
 color the page gives the button and there is nothing to say twice for dark mode.
@@ -44,15 +44,19 @@ row shares `location.href`.
 
 ## Buttons
 
-Up to five buttons, always in this order:
+Four buttons, always in this order:
 
 1. **X** — opens X's tweet composer, pre-filled with the URL.
 2. **LINE** — opens LINE's share intent.
 3. **Threads** — opens Threads' post composer, pre-filled with the URL.
-4. **Copy URL** — copies the URL to the clipboard, and briefly shows a tick to
-   confirm it worked.
-5. **Share** — opens the platform's native share sheet with `{ url }`. Present
-   only where `navigator.share` exists.
+4. **Share** (where `navigator.share` exists) — opens the platform's native
+   share sheet with `{ url }`. **Copy URL** (otherwise) — copies the URL to the
+   clipboard, and briefly shows a tick to confirm it worked.
+
+The fourth is one or the other, never both: copying out of a share sheet is a
+row of the sheet, and the share button falls back to the clipboard by itself
+when the sheet is refused — which is the only case a separate copy button would
+have covered.
 
 Each is icon-only. What a button is _called_ becomes its `aria-label` and its
 hover tooltip instead of text on it, so it still has a name for a screen reader
@@ -79,14 +83,14 @@ A phone's native share sheet already lists every app the reader has, so three
 brand buttons beside it are three worse copies of one of its rows. On a desktop
 the same sheet is the weak option — a short list, or nothing — and a direct link
 to X or Threads is the better one. So by default the row leans one way or the
-other rather than showing the same five buttons to both:
+other rather than showing the same four buttons to both:
 
-|                                 | what the reader sees   |
-| ------------------------------- | ---------------------- |
-| Touch device with a share sheet | **Share** alone        |
-| Touch device without one        | X, LINE, Threads, Copy |
-| Desktop with a share sheet      | all five               |
-| Desktop without one             | X, LINE, Threads, Copy |
+|                                 | what the reader sees    |
+| ------------------------------- | ----------------------- |
+| Touch device with a share sheet | **Share** alone         |
+| Touch device without one        | X, LINE, Threads, Copy  |
+| Desktop with a share sheet      | X, LINE, Threads, Share |
+| Desktop without one             | X, LINE, Threads, Copy  |
 
 **The test is the pointer, not the browser.** `navigator.share` exists on
 desktop Chrome and Safari too — exactly where it is the weak path — so its
@@ -96,8 +100,8 @@ presence alone decides nothing; the default style asks
 it counts as a desktop. Being CSS rather than a measurement taken once, it also
 follows a tablet that gains a keyboard with nothing re-rendering.
 
-Every button is always in the DOM; this only decides which are shown. To show
-them all everywhere:
+Every button the platform can honour is in the DOM; this only decides which are
+shown. To show them all everywhere:
 
 ```html ignore
 <share-buttons show="all"></share-buttons>
