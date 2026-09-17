@@ -44,14 +44,15 @@ row shares `location.href`.
 
 ## Buttons
 
-Four buttons, always in this order:
+Up to five buttons, always in this order:
 
 1. **X** — opens X's tweet composer, pre-filled with the URL.
 2. **LINE** — opens LINE's share intent.
 3. **Threads** — opens Threads' post composer, pre-filled with the URL.
-4. **Share** (if `navigator.share` exists) — opens the platform's native share
-   sheet with `{ url }`. **Copy URL** (otherwise) — copies the URL to the
-   clipboard, and briefly shows a tick to confirm it worked.
+4. **Copy URL** — copies the URL to the clipboard, and briefly shows a tick to
+   confirm it worked.
+5. **Share** — opens the platform's native share sheet with `{ url }`. Present
+   only where `navigator.share` exists.
 
 Each is icon-only. What a button is _called_ becomes its `aria-label` and its
 hover tooltip instead of text on it, so it still has a name for a screen reader
@@ -72,6 +73,41 @@ The X/LINE/Threads URL builders (`xShareUrl`, `lineShareUrl`, `threadsShareUrl`)
 are also exported directly, in case you want to build your own links instead of
 using the row.
 
+## Touch devices get the share sheet alone
+
+A phone's native share sheet already lists every app the reader has, so three
+brand buttons beside it are three worse copies of one of its rows. On a desktop
+the same sheet is the weak option — a short list, or nothing — and a direct link
+to X or Threads is the better one. So by default the row leans one way or the
+other rather than showing the same five buttons to both:
+
+|                                 | what the reader sees   |
+| ------------------------------- | ---------------------- |
+| Touch device with a share sheet | **Share** alone        |
+| Touch device without one        | X, LINE, Threads, Copy |
+| Desktop with a share sheet      | all five               |
+| Desktop without one             | X, LINE, Threads, Copy |
+
+**The test is the pointer, not the browser.** `navigator.share` exists on
+desktop Chrome and Safari too — exactly where it is the weak path — so its
+presence alone decides nothing; the default style asks
+`@media (pointer: coarse)` as well. A laptop with a touchscreen reports
+`pointer: fine` with `any-pointer: coarse`, and `pointer` is the one asked, so
+it counts as a desktop. Being CSS rather than a measurement taken once, it also
+follows a tablet that gains a keyboard with nothing re-rendering.
+
+Every button is always in the DOM; this only decides which are shown. To show
+them all everywhere:
+
+```html ignore
+<share-buttons show="all"></share-buttons>
+```
+
+`show` is a property and an attribute like `url`, and takes `"auto"` (the
+default) or `"all"`. It is the way out on purpose: the rule that does the
+collapsing carries real specificity, so a page's own
+`.share-buttons__button { display: flex }` cannot switch it off by accident.
+
 ## Styling
 
 Rendered in **light DOM** (no shadow root) specifically so a page's own
@@ -84,6 +120,9 @@ styles:
 | `.share-buttons__button`                                                | every share/copy button |
 | `.share-buttons__button--x`, `--line`, `--threads`, `--share`, `--copy` | one specific button     |
 | `.share-buttons__icon`                                                  | the `<svg>` inside one  |
+
+The row also carries `data-share-sheet` when `navigator.share` exists, which is
+what the collapse rule above keys off.
 
 Any rule targeting these classes overrides the defaults without `!important` —
 `:where()` carries zero specificity, so even a bare
