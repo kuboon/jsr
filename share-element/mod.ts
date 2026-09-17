@@ -2,10 +2,10 @@
  * `<share-buttons>`: a row of share buttons for one URL.
  *
  * X, LINE and Threads, plus either a native share-sheet button (where `navigator.share` exists) or
- * a "copy URL" fallback. All four are monochrome icons drawn in `currentColor`, so they take the
- * color the page gives the button and need nothing said twice for dark mode. What a button is
- * called lives on as its `aria-label` and its tooltip rather than as text on it — see
- * {@link ShareButtonsLabels}.
+ * a "copy URL" fallback — never both, since copying out of a share sheet is a row of the sheet.
+ * All four are monochrome icons drawn in `currentColor`, so they take the color the page gives the
+ * button and need nothing said twice for dark mode. What a button is called lives on as its
+ * `aria-label` and its tooltip rather than as text on it — see {@link ShareButtonsLabels}.
  *
  * **It is only the buttons.** No panel, no heading, no close button, and nothing that shows or
  * hides itself: whether the row sits inline under an article, inside a popover, or in a `<dialog>`
@@ -234,7 +234,7 @@ const DEFAULT_STYLE = `
  * A phone's native sheet already lists every app the reader has, so three brand buttons beside it
  * are three worse copies of one of its rows. On a desktop the same sheet is the weak option — a
  * short list, or nothing — and a direct link to X or Threads is the better one. So the row leans
- * one way or the other rather than showing the same five buttons to both.
+ * one way or the other rather than showing the same four buttons to both.
  *
  * The test is the pointer, not the browser: \`navigator.share\` exists on desktop Chrome and Safari
  * too, which is exactly where it is the weak path, so its presence alone decides nothing. A laptop
@@ -374,29 +374,31 @@ function buildElementClass(): new () => ShareButtonsElement {
     }
 
     /**
-     * Lays out every button the platform can honour.
+     * Lays out the four buttons.
      *
-     * Copy is always there; the native share sheet joins it only where `navigator.share` exists.
-     * Which of them a reader actually sees is then a CSS question — see {@link DEFAULT_STYLE} —
-     * so nothing here has to guess at a device, and a device that changes its mind (a tablet
-     * gaining a keyboard) needs no re-render.
+     * The fourth is the share sheet where the platform has one and the clipboard where it does
+     * not — never both. Copying out of a share sheet is a row of the sheet, so a copy button
+     * beside it would be a worse way to reach the thing it already offers; and the share button
+     * falls back to the clipboard by itself when the sheet is refused, which is the only case the
+     * separate button would have covered.
+     *
+     * Which of the four a reader sees is then a CSS question — see {@link DEFAULT_STYLE} — so
+     * nothing here has to guess at a device, and a device that changes its mind (a tablet gaining
+     * a keyboard) needs no re-render.
      */
     #render(): void {
       if (!this.#built) return;
       this.#clearFlash();
-
-      const buttons = [
+      this.toggleAttribute(
+        "data-share-sheet",
+        typeof navigator.share === "function",
+      );
+      this.replaceChildren(
         this.#linkButton("x", this.#labels.x, xShareUrl),
         this.#linkButton("line", this.#labels.line, lineShareUrl),
         this.#linkButton("threads", this.#labels.threads, threadsShareUrl),
-        this.#copyButton(),
-      ];
-
-      const hasSheet = typeof navigator.share === "function";
-      if (hasSheet) buttons.push(this.#shareButton());
-      this.toggleAttribute("data-share-sheet", hasSheet);
-
-      this.replaceChildren(...buttons);
+        this.#shareOrCopyButton(),
+      );
     }
 
     /**
@@ -424,29 +426,26 @@ function buildElementClass(): new () => ShareButtonsElement {
       return button;
     }
 
-    #copyButton(): HTMLButtonElement {
+    #shareOrCopyButton(): HTMLButtonElement {
       const button = document.createElement("button");
       button.type = "button";
-      const label = this.#labels.copy;
-      button.className = "share-buttons__button share-buttons__button--copy";
-      setButtonIcon(button, ICONS.copy, label);
-      button.addEventListener(
-        "click",
-        () => void this.#copy(button, ICONS.copy, label),
-      );
-      return button;
-    }
-
-    #shareButton(): HTMLButtonElement {
-      const button = document.createElement("button");
-      button.type = "button";
-      const label = this.#labels.share;
-      button.className = "share-buttons__button share-buttons__button--share";
-      setButtonIcon(button, ICONS.share, label);
-      button.addEventListener(
-        "click",
-        () => void this.#share(button, ICONS.share, label),
-      );
+      if (typeof navigator.share === "function") {
+        const label = this.#labels.share;
+        button.className = "share-buttons__button share-buttons__button--share";
+        setButtonIcon(button, ICONS.share, label);
+        button.addEventListener(
+          "click",
+          () => void this.#share(button, ICONS.share, label),
+        );
+      } else {
+        const label = this.#labels.copy;
+        button.className = "share-buttons__button share-buttons__button--copy";
+        setButtonIcon(button, ICONS.copy, label);
+        button.addEventListener(
+          "click",
+          () => void this.#copy(button, ICONS.copy, label),
+        );
+      }
       return button;
     }
 
