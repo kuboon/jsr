@@ -1,9 +1,13 @@
 # @kuboon/share-element
 
-A share sheet as a single custom element: `<share-dialog>` wraps a native
-`<dialog>` with X, LINE, and Threads share buttons, plus a native share-sheet
-button (where the Web Share API exists) or a "copy URL" fallback where it
-doesn't.
+A share panel as a single custom element: `<share-dialog>` — a plain `<div>`,
+not a `<dialog>` — with X, LINE, and Threads share buttons, plus a native
+share-sheet button (where the Web Share API exists) or a "copy URL" fallback
+where it doesn't.
+
+It has no opinion on how it's shown. `.open()`/`.close()` only toggle its
+`hidden` attribute; whether that reveals a popover, a fixed-position overlay, or
+an inline panel is entirely up to your own markup and CSS.
 
 ## Usage
 
@@ -31,12 +35,13 @@ document.getElementById("share").open(); // uses the url attribute
 </script>
 ```
 
-`.open({ url, text })` sets the shared URL and the dialog's text, then shows it.
-Both fall back — `url` to the element's `url` attribute (or whatever was last
-used), `text` to the `text` attribute — so a purely declarative
-`<share-dialog url="…">` plus `.open()` with no arguments works too.
+`.open({ url, text })` sets the shared URL and the panel's text, then clears its
+`hidden` attribute. Both fall back — `url` to the element's `url` attribute (or
+whatever was last used), `text` to the `text` attribute — so a purely
+declarative `<share-dialog url="…">` plus `.open()` with no arguments works too.
+`.close()` just sets `hidden` back.
 
-**`text` is display-only.** It's shown inside the dialog to explain what's being
+**`text` is display-only.** It's shown inside the panel to explain what's being
 shared, but it is never passed to X, LINE, Threads, the Web Share API, or the
 clipboard — only `url` is.
 
@@ -53,7 +58,7 @@ Four buttons, always in this order:
 
 The X/LINE/Threads URL builders (`xShareUrl`, `lineShareUrl`, `threadsShareUrl`)
 are also exported directly, in case you want to build your own links instead of
-using the dialog.
+using the panel.
 
 ## Styling
 
@@ -63,7 +68,7 @@ styles:
 
 | Class                                                                  | Element                 |
 | ---------------------------------------------------------------------- | ----------------------- |
-| `.share-dialog`                                                        | the `<dialog>` itself   |
+| `.share-dialog`                                                        | the panel itself        |
 | `.share-dialog__text`                                                  | the explanatory text    |
 | `.share-dialog__actions`                                               | the button row          |
 | `.share-dialog__button`                                                | every share/copy button |

@@ -1,9 +1,14 @@
 /**
- * `<share-dialog>`: a native `<dialog>`-based share sheet.
+ * `<share-dialog>`: a share panel, as a plain block of markup.
  *
- * Feed it a URL (and an explanatory message, shown only inside the dialog — never passed to a
+ * Feed it a URL (and an explanatory message, shown only inside the panel — never passed to a
  * share target) and call `.open()`. It lines up X, LINE, and Threads share buttons, plus either a
  * native share-sheet button (where `navigator.share` exists) or a "copy URL" fallback.
+ *
+ * It is a plain `<div>`-like element, not a `<dialog>`: no backdrop, no focus trap, no top layer,
+ * no opinion on how it's positioned. `.open()`/`.close()` only toggle its `hidden` attribute —
+ * whether that's a popover, a fixed-position overlay, an inline panel, or something else entirely
+ * is for the page's own markup and CSS to decide.
  *
  * Rendered in light DOM with plain, low-specificity (`:where()`) default styles under
  * `.share-dialog__*` classes, so a page's own stylesheet can restyle any part of it by simply
@@ -60,7 +65,7 @@ const DEFAULT_LABELS: Required<ShareDialogLabels> = {
 export type ShareDialogOpenOptions = {
   /** The URL every button shares. Falls back to the `url` attribute, then the last value used. */
   url?: string;
-  /** Explanatory text shown inside the dialog only. Falls back to the `text` attribute. */
+  /** Explanatory text shown inside the panel only. Falls back to the `text` attribute. */
   text?: string;
 };
 
@@ -68,13 +73,13 @@ const STYLE_ID = "share-dialog-default-style";
 
 const DEFAULT_STYLE = `
 :where(.share-dialog) {
+  display: block;
   padding: 1.5rem;
   border: 1px solid #d0d0d0;
   border-radius: 12px;
   max-width: 22rem;
   font: inherit;
 }
-:where(.share-dialog)::backdrop { background: rgb(0 0 0 / 0.4); }
 :where(.share-dialog__text) { margin: 0 0 1rem; font: inherit; }
 :where(.share-dialog__actions) { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0; margin: 0; }
 :where(.share-dialog__button) {
@@ -110,19 +115,18 @@ function ensureDefaultStyle(): void {
 }
 
 /**
- * A share sheet: the element's own API on top of `HTMLElement`.
+ * A share panel: the element's own API on top of `HTMLElement`.
  *
  * This is a type, not a class, because the class behind it cannot exist until there is an
  * `HTMLElement` to extend — see {@link defineShareDialog}. Reach for `instanceof` through
  * `customElements.get(DEFAULT_TAG_NAME)` if you need it.
  */
 export interface ShareDialogElement extends HTMLElement {
-  /** The underlying `<dialog>`, for anything this element doesn't expose directly. */
-  readonly dialog: HTMLDialogElement;
   /** The button/close-action labels currently in effect. */
   labels: ShareDialogLabels;
-  /** Sets the shared URL and the dialog's text, then opens it. */
+  /** Sets the shared URL and the panel's text, then clears its `hidden` attribute. */
   open(options?: ShareDialogOpenOptions): void;
+  /** Sets the `hidden` attribute. */
   close(): void;
 }
 
@@ -133,7 +137,6 @@ function buildElementClass(): new () => ShareDialogElement {
   if (elementClass !== undefined) return elementClass;
 
   elementClass = class extends HTMLElement implements ShareDialogElement {
-    #dialog: HTMLDialogElement;
     #textEl: HTMLParagraphElement;
     #actions: HTMLDivElement;
     #closeButton: HTMLButtonElement;
@@ -144,13 +147,8 @@ function buildElementClass(): new () => ShareDialogElement {
       super();
       ensureDefaultStyle();
 
-      this.#dialog = document.createElement("dialog");
-      this.#dialog.className = "share-dialog";
-      // A click landing on the dialog element itself (not its content) is a backdrop click,
-      // since ::backdrop isn't a real event target.
-      this.#dialog.addEventListener("click", (event) => {
-        if (event.target === this.#dialog) this.#dialog.close();
-      });
+      this.classList.add("share-dialog");
+      this.hidden = true;
 
       this.#textEl = document.createElement("p");
       this.#textEl.className = "share-dialog__text";
@@ -161,18 +159,13 @@ function buildElementClass(): new () => ShareDialogElement {
       this.#closeButton = document.createElement("button");
       this.#closeButton.type = "button";
       this.#closeButton.className = "share-dialog__close";
-      this.#closeButton.addEventListener("click", () => this.#dialog.close());
+      this.#closeButton.addEventListener("click", () => this.close());
 
-      this.#dialog.append(this.#textEl, this.#actions, this.#closeButton);
-      this.append(this.#dialog);
+      this.append(this.#textEl, this.#actions, this.#closeButton);
     }
 
     connectedCallback(): void {
       this.#renderActions();
-    }
-
-    get dialog(): HTMLDialogElement {
-      return this.#dialog;
     }
 
     get labels(): Required<ShareDialogLabels> {
@@ -189,11 +182,11 @@ function buildElementClass(): new () => ShareDialogElement {
       this.#textEl.textContent = options.text ?? this.getAttribute("text") ??
         "";
       this.#renderActions();
-      this.#dialog.showModal();
+      this.hidden = false;
     }
 
     close(): void {
-      this.#dialog.close();
+      this.hidden = true;
     }
 
     #renderActions(): void {
@@ -265,7 +258,7 @@ function buildElementClass(): new () => ShareDialogElement {
  * Registers the custom element, if there is a DOM to register it in.
  *
  * Importing this module already calls this once, so most apps never need it; it is here for the
- * app that wants the dialog under a second tag name, and it is what makes the import itself safe
+ * app that wants the panel under a second tag name, and it is what makes the import itself safe
  * on a server. Calling it repeatedly, or where the tag is already taken, does nothing.
  *
  * @param tagName Tag to register. Defaults to {@link DEFAULT_TAG_NAME}
@@ -285,9 +278,6 @@ export function defineShareDialog(tagName: string = DEFAULT_TAG_NAME): boolean {
 
 /**
  * Creates a `<share-dialog>`, registering the element first if it is not already.
- *
- * Append it before calling `.open()`: a `<dialog>` that is not connected to the document cannot
- * be shown modally.
  *
  * @param tagName Tag to create. Defaults to {@link DEFAULT_TAG_NAME}
  * @returns The new element
