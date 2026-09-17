@@ -5,6 +5,9 @@ not a `<dialog>` — with X, LINE, and Threads share buttons, plus a native
 share-sheet button (where the Web Share API exists) or a "copy URL" fallback
 where it doesn't.
 
+All four are monochrome icons drawn in `currentColor`, so they take whatever
+color the page gives the button and there is nothing to say twice for dark mode.
+
 It has no opinion on how it's shown. `.open()`/`.close()` only toggle its
 `hidden` attribute; whether that reveals a popover, a fixed-position overlay, or
 an inline panel is entirely up to your own markup and CSS.
@@ -54,15 +57,22 @@ Four buttons, always in this order:
 3. **Threads** — opens Threads' post composer, pre-filled with the URL.
 4. **Share** (if `navigator.share` exists) — opens the platform's native share
    sheet with `{ url }`. **Copy URL** (otherwise) — copies the URL to the
-   clipboard, and briefly relabels itself to confirm it worked.
+   clipboard, and briefly shows a tick to confirm it worked.
+
+Each is icon-only. What a button is _called_ becomes its `aria-label` and its
+hover tooltip instead of text on it, so it still has a name for a screen reader
+and for a mouse — see the `labels` block under [Styling](#styling) for changing
+those names.
 
 The URL always ends up somewhere the reader can use it. If the platform refuses
 to open the share sheet at all — no registered target, an insecure context, a
 gesture the browser did not count — the button copies to the clipboard instead,
-and relabels itself the same way. If the clipboard refuses too, it says so
-rather than looking like it worked. The one rejection that is _not_ treated as a
-failure is the reader closing the share sheet: that is an answer, and copying
-behind their back would be the wrong thing to do.
+and shows the same tick. If the clipboard refuses too, it shows a warning
+triangle rather than looking like it worked. Either way the accessible name
+changes with the glyph, so the answer is not something only a sighted reader
+gets. The one rejection that is _not_ treated as a failure is the reader closing
+the share sheet: that is an answer, and copying behind their back would be the
+wrong thing to do.
 
 The X/LINE/Threads URL builders (`xShareUrl`, `lineShareUrl`, `threadsShareUrl`)
 are also exported directly, in case you want to build your own links instead of
@@ -81,6 +91,7 @@ styles:
 | `.share-dialog__actions`                                               | the button row          |
 | `.share-dialog__button`                                                | every share/copy button |
 | `.share-dialog__button--x`, `--line`, `--threads`, `--share`, `--copy` | one specific button     |
+| `.share-dialog__icon`                                                  | the `<svg>` inside one  |
 | `.share-dialog__close`                                                 | the close button        |
 
 Any rule targeting these classes overrides the defaults without `!important` —
@@ -93,7 +104,12 @@ whatever the specificity — so a rule in `@layer app` loses to
 `:where(.share-dialog)` even though `:where()` counts for nothing. Write your
 overrides unlayered as well.
 
-Labels are overridable too, via `.labels`:
+Sizing an icon is `.share-dialog__icon { width; height }` — the glyphs are
+`24×24` and take their color from the button, so `color` on the button is what
+recolors them.
+
+The names are overridable too, via `.labels`. They are what a screen reader
+announces and what the tooltip says, not text on the button:
 
 ```ts ignore
 share.labels = {
@@ -112,6 +128,17 @@ DOM, and does nothing anywhere else, so a component file that is also evaluated
 on a server — an SSG build, an SSR render — can import it at the top like any
 other module. `defineShareDialog()` returns whether the element ended up
 registered; `createShareDialog()` throws where there is no DOM to create one in.
+
+## Icon credits
+
+The three brand marks are [Simple Icons](https://simpleicons.org) (CC0-1.0); the
+share, copy, tick and warning glyphs are [Feather](https://feathericons.com)
+(MIT), redrawn as `<path>` data so one code path builds them all. The path data
+is embedded in `mod.ts` — there is no icon dependency to install.
+
+Each brand belongs to its owner. The marks are here to label the button that
+opens that service, which is the use the brands themselves ask for; this package
+is not affiliated with any of them.
 
 ## License
 
