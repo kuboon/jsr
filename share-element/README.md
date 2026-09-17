@@ -1,63 +1,58 @@
 # @kuboon/share-element
 
-A share panel as a single custom element: `<share-dialog>` — a plain `<div>`,
-not a `<dialog>` — with X, LINE, and Threads share buttons, plus a native
-share-sheet button (where the Web Share API exists) or a "copy URL" fallback
-where it doesn't.
+A row of share buttons as a single custom element: `<share-buttons>` — X, LINE
+and Threads, plus a native share-sheet button (where the Web Share API exists)
+or a "copy URL" fallback where it doesn't.
 
 All four are monochrome icons drawn in `currentColor`, so they take whatever
 color the page gives the button and there is nothing to say twice for dark mode.
 
-It has no opinion on how it's shown. `.open()`/`.close()` only toggle its
-`hidden` attribute; whether that reveals a popover, a fixed-position overlay, or
-an inline panel is entirely up to your own markup and CSS.
+**It is only the buttons.** No panel, no heading, no close button, and nothing
+that shows or hides itself. Whether the row sits inline under an article, inside
+a popover, or in a `<dialog>` the page opens is the page's business — and so is
+opening and closing whatever holds it. Put the tag where you want the buttons to
+be and style the thing around it yourself.
 
 ## Usage
 
-```ts ignore
-import { createShareDialog } from "@kuboon/share-element";
-
-const share = createShareDialog();
-document.body.append(share);
-
-button.addEventListener("click", () => {
-  share.open({
-    url: "https://example.com/posts/1",
-    text: "この記事をシェアしよう",
-  });
-});
+```html ignore
+<p>Enjoyed this? Pass it on:</p>
+<share-buttons></share-buttons>
 ```
 
-Or declare it in markup and drive it from JS:
+That shares the page it is on. To share something else, give it a `url`:
 
 ```html ignore
-<share-dialog id="share" url="https://example.com/posts/1"></share-dialog>
-<script type="module">
-import "@kuboon/share-element";
-document.getElementById("share").open(); // uses the url attribute
-</script>
+<share-buttons url="https://example.com/posts/1"></share-buttons>
 ```
 
-`.open({ url, text })` sets the shared URL and the panel's text, then clears its
-`hidden` attribute. Both fall back — `url` to the element's `url` attribute (or
-whatever was last used), `text` to the `text` attribute — so a purely
-declarative `<share-dialog url="…">` plus `.open()` with no arguments works too.
-`.close()` just sets `hidden` back.
+Or build one from script:
 
-**`text` is display-only.** It's shown inside the panel to explain what's being
-shared, but it is never passed to X, LINE, Threads, the Web Share API, or the
-clipboard — only `url` is.
+```ts ignore
+import { createShareButtons } from "@kuboon/share-element";
+
+const row = createShareButtons();
+row.url = "https://example.com/posts/1";
+article.append(row);
+```
+
+`url` is a property and an attribute, and the two reflect each other. **It is
+read at the moment of the click**, not when the row is built — so a row placed
+once on a page that navigates on the client goes on sharing wherever the reader
+actually is, rather than the address it was rendered at. Leave it empty and the
+row shares `location.href`.
 
 ## Buttons
 
-Four buttons, always in this order:
+Up to five buttons, always in this order:
 
 1. **X** — opens X's tweet composer, pre-filled with the URL.
 2. **LINE** — opens LINE's share intent.
 3. **Threads** — opens Threads' post composer, pre-filled with the URL.
-4. **Share** (if `navigator.share` exists) — opens the platform's native share
-   sheet with `{ url }`. **Copy URL** (otherwise) — copies the URL to the
-   clipboard, and briefly shows a tick to confirm it worked.
+4. **Copy URL** — copies the URL to the clipboard, and briefly shows a tick to
+   confirm it worked.
+5. **Share** — opens the platform's native share sheet with `{ url }`. Present
+   only where `navigator.share` exists.
 
 Each is icon-only. What a button is _called_ becomes its `aria-label` and its
 hover tooltip instead of text on it, so it still has a name for a screen reader
@@ -76,7 +71,42 @@ wrong thing to do.
 
 The X/LINE/Threads URL builders (`xShareUrl`, `lineShareUrl`, `threadsShareUrl`)
 are also exported directly, in case you want to build your own links instead of
-using the panel.
+using the row.
+
+## Touch devices get the share sheet alone
+
+A phone's native share sheet already lists every app the reader has, so three
+brand buttons beside it are three worse copies of one of its rows. On a desktop
+the same sheet is the weak option — a short list, or nothing — and a direct link
+to X or Threads is the better one. So by default the row leans one way or the
+other rather than showing the same five buttons to both:
+
+|                                 | what the reader sees   |
+| ------------------------------- | ---------------------- |
+| Touch device with a share sheet | **Share** alone        |
+| Touch device without one        | X, LINE, Threads, Copy |
+| Desktop with a share sheet      | all five               |
+| Desktop without one             | X, LINE, Threads, Copy |
+
+**The test is the pointer, not the browser.** `navigator.share` exists on
+desktop Chrome and Safari too — exactly where it is the weak path — so its
+presence alone decides nothing; the default style asks
+`@media (pointer: coarse)` as well. A laptop with a touchscreen reports
+`pointer: fine` with `any-pointer: coarse`, and `pointer` is the one asked, so
+it counts as a desktop. Being CSS rather than a measurement taken once, it also
+follows a tablet that gains a keyboard with nothing re-rendering.
+
+Every button is always in the DOM; this only decides which are shown. To show
+them all everywhere:
+
+```html ignore
+<share-buttons show="all"></share-buttons>
+```
+
+`show` is a property and an attribute like `url`, and takes `"auto"` (the
+default) or `"all"`. It is the way out on purpose: the rule that does the
+collapsing carries real specificity, so a page's own
+`.share-buttons__button { display: flex }` cannot switch it off by accident.
 
 ## Styling
 
@@ -84,27 +114,27 @@ Rendered in **light DOM** (no shadow root) specifically so a page's own
 stylesheet can restyle it, under plain, low-specificity (`:where(...)`) default
 styles:
 
-| Class                                                                  | Element                 |
-| ---------------------------------------------------------------------- | ----------------------- |
-| `.share-dialog`                                                        | the panel itself        |
-| `.share-dialog__text`                                                  | the explanatory text    |
-| `.share-dialog__actions`                                               | the button row          |
-| `.share-dialog__button`                                                | every share/copy button |
-| `.share-dialog__button--x`, `--line`, `--threads`, `--share`, `--copy` | one specific button     |
-| `.share-dialog__icon`                                                  | the `<svg>` inside one  |
-| `.share-dialog__close`                                                 | the close button        |
+| Class                                                                   | Element                 |
+| ----------------------------------------------------------------------- | ----------------------- |
+| `.share-buttons`                                                        | the row itself          |
+| `.share-buttons__button`                                                | every share/copy button |
+| `.share-buttons__button--x`, `--line`, `--threads`, `--share`, `--copy` | one specific button     |
+| `.share-buttons__icon`                                                  | the `<svg>` inside one  |
+
+The row also carries `data-share-sheet` when `navigator.share` exists, which is
+what the collapse rule above keys off.
 
 Any rule targeting these classes overrides the defaults without `!important` —
 `:where()` carries zero specificity, so even a bare
-`.share-dialog__button { ... }` in your stylesheet wins.
+`.share-buttons__button { ... }` in your stylesheet wins.
 
 **With one catch, if you use cascade layers.** The defaults are injected as a
 plain `<style>` with no layer, and unlayered CSS outranks _every_ `@layer`
 whatever the specificity — so a rule in `@layer app` loses to
-`:where(.share-dialog)` even though `:where()` counts for nothing. Write your
+`:where(.share-buttons)` even though `:where()` counts for nothing. Write your
 overrides unlayered as well.
 
-Sizing an icon is `.share-dialog__icon { width; height }` — the glyphs are
+Sizing an icon is `.share-buttons__icon { width; height }` — the glyphs are
 `24×24` and take their color from the button, so `color` on the button is what
 recolors them.
 
@@ -112,22 +142,22 @@ The names are overridable too, via `.labels`. They are what a screen reader
 announces and what the tooltip says, not text on the button:
 
 ```ts ignore
-share.labels = {
+row.labels = {
   share: "共有",
   copy: "URLをコピー",
   copied: "コピーしました",
   copyFailed: "コピーできませんでした",
-  close: "閉じる",
 };
 ```
 
 ## Custom element registration
 
-Importing `@kuboon/share-element` registers `<share-dialog>` wherever there is a
-DOM, and does nothing anywhere else, so a component file that is also evaluated
-on a server — an SSG build, an SSR render — can import it at the top like any
-other module. `defineShareDialog()` returns whether the element ended up
-registered; `createShareDialog()` throws where there is no DOM to create one in.
+Importing `@kuboon/share-element` registers `<share-buttons>` wherever there is
+a DOM, and does nothing anywhere else, so a component file that is also
+evaluated on a server — an SSG build, an SSR render — can import it at the top
+like any other module. `defineShareButtons()` returns whether the element ended
+up registered; `createShareButtons()` throws where there is no DOM to create one
+in.
 
 ## Icon credits
 
