@@ -5,7 +5,8 @@
  * a "copy URL" fallback — never both, since copying out of a share sheet is a row of the sheet.
  * All four are monochrome icons drawn in `currentColor`, so they take the color the page gives the
  * button and need nothing said twice for dark mode. What a button is called lives on as its
- * `aria-label` and its tooltip rather than as text on it — see {@link ShareButtonsLabels}.
+ * `aria-label` and its tooltip rather than as text on it, in the language the page declares —
+ * see {@link SHARE_BUTTONS_LABELS}.
  *
  * **It is only the buttons.** No panel, no heading, no close button, and nothing that shows or
  * hides itself: whether the row sits inline under an article, inside a popover, or in a `<dialog>`
@@ -70,15 +71,90 @@ export type ShareButtonsLabels = {
   copyFailed?: string;
 };
 
-const DEFAULT_LABELS: Required<ShareButtonsLabels> = {
-  x: "X",
-  line: "LINE",
-  threads: "Threads",
-  share: "Share",
-  copy: "Copy URL",
-  copied: "Copied!",
-  copyFailed: "Couldn't copy",
+/**
+ * What the buttons are called, by language.
+ *
+ * A row sits inside somebody's page, and the names it carries are read out next to that page's
+ * own words — so a Japanese page whose share button announces itself as "Copy URL" is a row
+ * speaking a language its reader did not choose. Getting that right should not cost the page a
+ * line of script, so the names come from the language the page already declares.
+ *
+ * X, LINE and Threads are the same in every one of these: a brand name is not translated.
+ *
+ * Two languages ship because two are what these were written for. **Adding a key registers a
+ * language** — `SHARE_BUTTONS_LABELS.fr = { … }` before the row is built is all it takes, and
+ * every row in a `lang="fr"` page picks it up. A row that needs different names for its own sake,
+ * rather than for its language, sets {@linkcode ShareButtonsElement.labels} instead.
+ */
+export const SHARE_BUTTONS_LABELS: Record<
+  string,
+  Required<ShareButtonsLabels>
+> = {
+  en: {
+    x: "X",
+    line: "LINE",
+    threads: "Threads",
+    share: "Share",
+    copy: "Copy URL",
+    copied: "Copied!",
+    copyFailed: "Couldn't copy",
+  },
+  ja: {
+    x: "X",
+    line: "LINE",
+    threads: "Threads",
+    share: "共有",
+    copy: "URL をコピー",
+    copied: "コピーしました",
+    copyFailed: "コピーできませんでした",
+  },
 };
+
+/** What an unknown language falls back to. */
+const FALLBACK_LANGUAGE = "en";
+
+/**
+ * The names for a language tag.
+ *
+ * Matched on the primary subtag alone: `ja-JP` and `ja` want the same words, and a region that
+ * has no entry of its own should read its language's rather than English.
+ *
+ * @param language A BCP 47 tag, or the empty string
+ * @returns That language's names, or {@linkcode FALLBACK_LANGUAGE}'s
+ *
+ * @example
+ * ```ts
+ * import { assertEquals } from "@std/assert";
+ * import { shareButtonsLabels } from "@kuboon/share-element";
+ *
+ * assertEquals(shareButtonsLabels("ja-JP").share, "共有");
+ * assertEquals(shareButtonsLabels("fr").share, "Share");
+ * ```
+ */
+export function shareButtonsLabels(
+  language: string,
+): Required<ShareButtonsLabels> {
+  const primary = language.toLowerCase().split("-")[0];
+  return SHARE_BUTTONS_LABELS[primary] ??
+    SHARE_BUTTONS_LABELS[FALLBACK_LANGUAGE];
+}
+
+/**
+ * The language an element is written in: the page's, never the reader's.
+ *
+ * `navigator.language` is what the *reader* prefers, which is a different question — these names
+ * are read alongside the page's own text, and text that switches language halfway through is
+ * worse than text in one language the reader may not have picked.
+ *
+ * `closest()` covers the element's own `lang` as well as any ancestor's, which is what lets one
+ * row inside a quoted passage differ from the page around it. The document's own is the fallback,
+ * for a row created by script and not yet inserted anywhere.
+ */
+function languageOf(element: Element): string {
+  const declared = element.closest("[lang]")?.getAttribute("lang");
+  if (declared) return declared;
+  return element.ownerDocument?.documentElement.lang ?? "";
+}
 
 /**
  * One monochrome glyph, as `<path>` data on a 24×24 grid.
@@ -299,7 +375,12 @@ export interface ShareButtonsElement extends HTMLElement {
    * that has one, and shows everything elsewhere. `"all"` shows everything everywhere.
    */
   show: "auto" | "all";
-  /** What each button is called. */
+  /**
+   * What each button is called, overriding the names its language would give it.
+   *
+   * Reading it back gives the resolved set — this row's language, with whatever was set here on
+   * top. Setting it merges, so a row can rename one button and leave the rest to its language.
+   */
   labels: ShareButtonsLabels;
 }
 
@@ -311,8 +392,29 @@ function buildElementClass(): new () => ShareButtonsElement {
 
   elementClass = class extends HTMLElement implements ShareButtonsElement {
     #built = false;
-    #labels: Required<ShareButtonsLabels> = { ...DEFAULT_LABELS };
+    /** Only what this row was told to call things — the rest comes from its language. */
+    #overrides: ShareButtonsLabels = {};
     #flashTimer?: ReturnType<typeof setTimeout>;
+
+    /**
+     * `lang` is watched because it decides what the buttons are called.
+     *
+     * `url` and `show` are not: the first is read at the moment of the click, and the second is
+     * answered in CSS. Only an ancestor's `lang` escapes this, and re-reading the language on
+     * every render covers the ones that matter.
+     */
+    static get observedAttributes(): string[] {
+      return ["lang"];
+    }
+
+    attributeChangedCallback(): void {
+      this.#render();
+    }
+
+    /** This row's language, with anything {@linkcode labels} was set to on top. */
+    #names(): Required<ShareButtonsLabels> {
+      return { ...shareButtonsLabels(languageOf(this)), ...this.#overrides };
+    }
 
     /**
      * Fills the row in, once, the first time it is inserted.
@@ -353,11 +455,11 @@ function buildElementClass(): new () => ShareButtonsElement {
     }
 
     get labels(): Required<ShareButtonsLabels> {
-      return { ...this.#labels };
+      return this.#names();
     }
 
     set labels(value: ShareButtonsLabels) {
-      this.#labels = { ...this.#labels, ...value };
+      this.#overrides = { ...this.#overrides, ...value };
       this.#render();
     }
 
@@ -393,11 +495,12 @@ function buildElementClass(): new () => ShareButtonsElement {
         "data-share-sheet",
         typeof navigator.share === "function",
       );
+      const names = this.#names();
       this.replaceChildren(
-        this.#linkButton("x", this.#labels.x, xShareUrl),
-        this.#linkButton("line", this.#labels.line, lineShareUrl),
-        this.#linkButton("threads", this.#labels.threads, threadsShareUrl),
-        this.#shareOrCopyButton(),
+        this.#linkButton("x", names.x, xShareUrl),
+        this.#linkButton("line", names.line, lineShareUrl),
+        this.#linkButton("threads", names.threads, threadsShareUrl),
+        this.#shareOrCopyButton(names),
       );
     }
 
@@ -426,11 +529,13 @@ function buildElementClass(): new () => ShareButtonsElement {
       return button;
     }
 
-    #shareOrCopyButton(): HTMLButtonElement {
+    #shareOrCopyButton(
+      names: Required<ShareButtonsLabels>,
+    ): HTMLButtonElement {
       const button = document.createElement("button");
       button.type = "button";
       if (typeof navigator.share === "function") {
-        const label = this.#labels.share;
+        const label = names.share;
         button.className = "share-buttons__button share-buttons__button--share";
         setButtonIcon(button, ICONS.share, label);
         button.addEventListener(
@@ -438,7 +543,7 @@ function buildElementClass(): new () => ShareButtonsElement {
           () => void this.#share(button, ICONS.share, label),
         );
       } else {
-        const label = this.#labels.copy;
+        const label = names.copy;
         button.className = "share-buttons__button share-buttons__button--copy";
         setButtonIcon(button, ICONS.copy, label);
         button.addEventListener(
@@ -513,7 +618,7 @@ function buildElementClass(): new () => ShareButtonsElement {
       label: string,
     ): void {
       this.#clearFlash();
-      setButtonIcon(button, ICONS[outcome], this.#labels[outcome]);
+      setButtonIcon(button, ICONS[outcome], this.#names()[outcome]);
       this.#flashTimer = setTimeout(() => {
         this.#flashTimer = undefined;
         setButtonIcon(button, icon, label);
