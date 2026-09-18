@@ -3,8 +3,9 @@
  *
  * X, LINE and Threads, plus either a native share-sheet button (where `navigator.share` exists) or
  * a "copy URL" fallback — never both, since copying out of a share sheet is a row of the sheet.
- * All four are monochrome icons drawn in `currentColor`, so they take the color the page gives the
- * button and need nothing said twice for dark mode. What a button is called lives on as its
+ * All four are monochrome icons drawn in `currentColor`, inside a box drawn from `currentColor`
+ * as well, so the row takes the color the page gives it and needs nothing said twice for dark
+ * mode. What a button is called lives on as its
  * `aria-label` and its tooltip rather than as text on it, in the language the page declares —
  * see {@link SHARE_BUTTONS_LABELS}.
  *
@@ -287,20 +288,33 @@ const STYLE_ID = "share-buttons-default-style";
 
 const DEFAULT_STYLE = `
 :where(.share-buttons) { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+/*
+ * The chrome is built from \`currentColor\`, like the glyph.
+ *
+ * A fixed \`background: #fff\` was the one thing here that did not follow the page, and on a dark
+ * page it was the thing that broke: the button stayed white while the glyph, being
+ * \`currentColor\`, turned light — a white mark on a white box. Anything painted in the page's own
+ * text color cannot go wrong that way, in either scheme, with nothing said twice.
+ *
+ * A browser without \`color-mix()\` drops those two declarations and gets a borderless row of
+ * glyphs on the page's background, which is legible; it is the box that is optional, not the mark.
+ */
 :where(.share-buttons__button) {
   flex: 0 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #d0d0d0;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
   border-radius: 8px;
-  background: #fff;
+  background: transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
 }
-:where(.share-buttons__button:hover) { background: #f2f2f2; }
+:where(.share-buttons__button:hover) {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
 /* The glyph inherits the button's color, which is the whole of \`monochrome\` here. */
 :where(.share-buttons__icon) { width: 1.25rem; height: 1.25rem; display: block; }
 
