@@ -4,8 +4,9 @@ A row of share buttons as a single custom element: `<share-buttons>` — X, LINE
 and Threads, plus a native share-sheet button (where the Web Share API exists)
 or a "copy URL" fallback where it doesn't — never both.
 
-All four are monochrome icons drawn in `currentColor`, so they take whatever
-color the page gives the button and there is nothing to say twice for dark mode.
+All four are monochrome icons drawn in `currentColor`, and the box around each
+one is drawn from `currentColor` too — so the whole row takes whatever color the
+page gives it, and there is nothing to say twice for dark mode.
 
 **It is only the buttons.** No panel, no heading, no close button, and nothing
 that shows or hides itself. Whether the row sits inline under an article, inside
@@ -141,6 +142,12 @@ overrides unlayered as well.
 Sizing an icon is `.share-buttons__icon { width; height }` — the glyphs are
 `24×24` and take their color from the button, so `color` on the button is what
 recolors them.
+
+**Nothing in the defaults is a fixed color.** The background is transparent and
+the border is the page's own text color at 25%, so a row put on a dark surface
+comes out light without being told: `color` is the one property that moves the
+whole row. Give a button its own `background` if you want one — that is the part
+the defaults deliberately leave to the page.
 
 The names come from the page's language rather than from the stylesheet — see
 [Language](#language) below.
