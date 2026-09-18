@@ -60,8 +60,8 @@ have covered.
 
 Each is icon-only. What a button is _called_ becomes its `aria-label` and its
 hover tooltip instead of text on it, so it still has a name for a screen reader
-and for a mouse — see the `labels` block under [Styling](#styling) for changing
-those names.
+and for a mouse. Those names follow the page's language — see
+[Language](#language).
 
 The URL always ends up somewhere the reader can use it. If the platform refuses
 to open the share sheet at all — no registered target, an insecure context, a
@@ -142,17 +142,70 @@ Sizing an icon is `.share-buttons__icon { width; height }` — the glyphs are
 `24×24` and take their color from the button, so `color` on the button is what
 recolors them.
 
-The names are overridable too, via `.labels`. They are what a screen reader
-announces and what the tooltip says, not text on the button:
+The names come from the page's language rather than from the stylesheet — see
+[Language](#language) below.
+
+## Language
+
+The names are read out next to the page's own words, so they follow **the
+language the page declares**, not the reader's browser setting. A page that says
+`<html lang="ja">` gets a row that says 共有 and URL をコピー, with no script
+and nothing to configure:
+
+```html ignore
+<html lang="ja">
+  <share-buttons></share-buttons>
+</html>
+```
+
+English and Japanese ship. Anything else reads English — better than a row of
+empty tooltips, and better than a guessed translation. The tag is matched on its
+primary subtag, so `ja-JP` is `ja`, and a row takes the nearest `lang` above it,
+which is usually the document's but can be a quoted passage's:
+
+```html ignore
+<blockquote lang="en">
+  <share-buttons></share-buttons>
+</blockquote>
+```
+
+`lang` on the row itself counts as well, and is watched: setting it later
+re-renders the names. (An _ancestor's_ `lang` changing is not watched — the
+language is re-read on every render, which covers the cases that matter.)
+
+**Adding a language is adding a key.** Do it once, before the rows are built,
+and every row in a page of that language picks it up:
 
 ```ts ignore
-row.labels = {
-  share: "共有",
-  copy: "URLをコピー",
-  copied: "コピーしました",
-  copyFailed: "コピーできませんでした",
+import { SHARE_BUTTONS_LABELS } from "@kuboon/share-element";
+
+SHARE_BUTTONS_LABELS.fr = {
+  ...SHARE_BUTTONS_LABELS.en,
+  share: "Partager",
+  copy: "Copier l'URL",
+  copied: "Copié !",
+  copyFailed: "Copie impossible",
 };
 ```
+
+`shareButtonsLabels("ja-JP")` returns the resolved set, for a page that builds
+its own controls from the same names.
+
+X, LINE and Threads are the same in every language: a brand name is not
+translated.
+
+### One row, different names
+
+`.labels` renames the buttons of one row, on top of whatever its language gives
+them. Use it when the names differ for this row's own sake rather than for its
+language — otherwise the language table is the place, so that every row agrees.
+
+```ts ignore
+row.labels = { copy: "リンクをコピー" };
+```
+
+Reading `.labels` back gives the resolved set: the row's language, with these on
+top.
 
 ## Custom element registration
 
