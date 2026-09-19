@@ -8,6 +8,10 @@
     "./tailwindcss-deno",
     "./share-element"
   ],
+  "minimumDependencyAge": {
+    "age": "P1D",
+    "exclude": ["npm:@remix-run/*"]
+  },
   "tasks": {
     "test": "deno test --allow-read --allow-env --allow-net --allow-sys --allow-ffi"
   }
