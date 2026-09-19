@@ -4,11 +4,7 @@ A product tour, as a single custom element: a dimmed page, a spotlight on one
 thing at a time, and a tooltip anchored to it. The tour itself is **JSON**, not
 markup — write a scenario, hand it to `<onboarding-tour>`, done.
 
-Pure DOM, zero runtime dependencies, no framework. For the
-[Remix UI](https://github.com/remix-run/remix/tree/main/packages/ui)-flavored
-version — same scenario format, rendered through Remix UI's component model —
-see
-[`@kuboon/remix-onboarding-kit`](https://github.com/kuboon/kuboon-remix-utils/tree/main/packages/onboarding-kit).
+Pure DOM, zero runtime dependencies, no framework.
 
 ## Installation
 
