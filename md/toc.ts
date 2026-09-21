@@ -15,11 +15,8 @@ const HEADING_DEPTH: Record<string, number> = {
 export interface TocEntry {
   /** Heading level, 1-6. */
   depth: number;
-  /**
-   * The heading's `id`, as assigned by {@linkcode rehypeHeadingLinks}. `undefined` if the tree
-   * was produced with `headingLinks: false`.
-   */
-  id: string | undefined;
+  /** The heading's `id`, as assigned by {@linkcode rehypeHeadingLinks}. */
+  id: string;
   /** The heading's text content. */
   text: string;
 }
@@ -29,8 +26,7 @@ export interface TocEntry {
  * entry per heading (`h1`-`h6`), in document order.
  *
  * Reads the `id` {@linkcode rehypeHeadingLinks} already assigned to each heading, rather than
- * recomputing a slug — so a tree built with `headingLinks: false` yields entries with
- * `id: undefined`, since there's nothing to link a rendered table of contents to.
+ * recomputing a slug.
  *
  * @example
  * ```ts
@@ -52,9 +48,8 @@ export function tocFromHast(hast: Root): TocEntry[] {
   visit(hast, "element", (node) => {
     const depth = HEADING_DEPTH[node.tagName];
     if (depth === undefined) return;
-    const id = typeof node.properties?.id === "string"
-      ? node.properties.id
-      : undefined;
+    const id = node.properties?.id;
+    if (typeof id !== "string") return;
     entries.push({ depth, id, text: deepTextOf(node) });
   });
   return entries;

@@ -104,19 +104,6 @@ Deno.test("markdownToHast: heading ids are deduplicated", async () => {
   assertStringIncludes(html, 'id="user-content-hello-1"');
 });
 
-Deno.test("markdownToHast: headingLinks can be disabled", async () => {
-  const html = await render("# Hello\n", { headingLinks: false });
-  assertStringIncludes(html, "<h1>Hello</h1>");
-});
-
-Deno.test("markdownToHast: headingLinks prefix and behavior are configurable", async () => {
-  const html = await render("# Hello\n", {
-    headingLinks: { prefix: "", behavior: "append" },
-  });
-  assertStringIncludes(html, '<h1 id="hello">Hello<a');
-  assertStringIncludes(html, 'href="#hello">');
-});
-
 Deno.test("rehypeShiki: a core highlighter replaces the bundled one", async () => {
   // The point of this test is the type as much as the behavior: a real
   // `HighlighterCore` has to satisfy `ShikiHighlighter`, or the option is

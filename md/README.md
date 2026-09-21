@@ -8,7 +8,7 @@
 - GitHub Flavored
   Markdown（テーブル、タスクリスト、取り消し線、オートリンク）に対応。
 - 各見出しに `id`（GitHub 互換のスラッグ）を自動付与し、見出し自身にリンクする
-  `<a href="#slug">` を設定（無効化・カスタマイズ可）。
+  `<a href="#slug">` を設定。
 - `` ```mermaid `` コードブロックを
   [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) で SVG
   図として描画。
@@ -42,9 +42,8 @@
   の要素ツリーに変換（[`hast-util-to-jsx-runtime`](https://github.com/syntax-tree/hast-util-to-jsx-runtime)
   のラッパー）。`react-dom` などでそのままレンダリングできる。
 - `tocFromHast(hast)` — 見出し（`h1`-`h6`）を文書順に列挙した目次
-  （`{ depth, id, text }[]`）を返す。`id` は `rehypeHeadingLinks`
-  が付与したものをそのまま使うため、`headingLinks: false` のツリーでは
-  `id: undefined` になる。
+  （`{ depth, id, text }[]`）を返す。`id` は自動付与された `rehypeHeadingLinks`
+  のものをそのまま使う。
 
 UI フレームワークに縛られる後ろ2つは、`@kuboon/md` 本体ではなく**それぞれの
 エントリポイント**にある。`@kuboon/md` を import しただけで使わない
@@ -110,8 +109,6 @@ const hast = await markdownToHast("# Hello", {
   // shiki: { themes: { light: "github-light", dark: "github-dark" } },
   // 自前の highlighter を渡してバンドルを削ることもできる（下記参照）
   // shiki: { highlighter, theme: "github-dark" },
-  // 見出し ID・自己リンクの挙動を変える（あるいは headingLinks: false で無効化）
-  headingLinks: { prefix: "user-content-", behavior: "wrap" },
   // remark-rehype で hast に変換する直前、mdast に対して好きな変換をかけられる
   mdastTransform: (tree) => {
     visit(tree, "heading", (node) => {

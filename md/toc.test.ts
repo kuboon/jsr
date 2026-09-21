@@ -21,13 +21,6 @@ Deno.test("tocFromHast: collects text through inline formatting and the self-lin
   ]);
 });
 
-Deno.test("tocFromHast: id is undefined when headingLinks is disabled", async () => {
-  const hast = await markdownToHast("# Title\n", { headingLinks: false });
-  assertEquals(tocFromHast(hast), [
-    { depth: 1, id: undefined, text: "Title" },
-  ]);
-});
-
 Deno.test("tocFromHast: returns an empty array for headless documents", async () => {
   const hast = await markdownToHast("Just a paragraph, no headings.");
   assertEquals(tocFromHast(hast), []);
