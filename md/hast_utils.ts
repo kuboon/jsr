@@ -19,6 +19,16 @@ export function textOf(node: Element): string {
   return out;
 }
 
+/** Like {@linkcode textOf}, but also descends into child elements (e.g. a heading's `<a>` wrapper). */
+export function deepTextOf(node: Element): string {
+  let out = "";
+  for (const child of node.children) {
+    if (child.type === "text") out += child.value;
+    else if (child.type === "element") out += deepTextOf(child);
+  }
+  return out;
+}
+
 export function findCode(pre: Element): Element | undefined {
   return pre.children.find(
     (child): child is Element =>

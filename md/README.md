@@ -41,6 +41,10 @@
 - `hastToReact(hast, options?)`（`@kuboon/md/hast_to_react.ts`）— React
   の要素ツリーに変換（[`hast-util-to-jsx-runtime`](https://github.com/syntax-tree/hast-util-to-jsx-runtime)
   のラッパー）。`react-dom` などでそのままレンダリングできる。
+- `tocFromHast(hast)` — 見出し（`h1`-`h6`）を文書順に列挙した目次
+  （`{ depth, id, text }[]`）を返す。`id` は `rehypeHeadingLinks`
+  が付与したものをそのまま使うため、`headingLinks: false` のツリーでは
+  `id: undefined` になる。
 
 UI フレームワークに縛られる後ろ2つは、`@kuboon/md` 本体ではなく**それぞれの
 エントリポイント**にある。`@kuboon/md` を import しただけで使わない
@@ -204,6 +208,8 @@ const hast = await markdownToHast(source, {
   変換する。**本体からは export されない**（`@remix-run/ui` を引くため）。
 - `hastToReact(hast, options?)` / `./hast_to_react.ts` — hast を React
   の要素ツリーに変換する。**本体からは export されない**（`react` を引くため）。
+- `tocFromHast(hast)` / `./toc.ts` — hast
+  から見出しの目次（`{ depth, id, text }[]`）を抽出する。
 
 ## Links
 

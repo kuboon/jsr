@@ -12,10 +12,11 @@
  * // <h1 id="user-content-hello"><a href="#user-content-hello">Hello</a></h1>
  * ```
  *
- * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml}
- * and {@linkcode hastToDom} are here, and the two that bind you to a UI framework
- * live at their own entry points, so importing this module never puts one in your
- * dependency graph.
+ * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml},
+ * {@linkcode hastToDom}, and {@linkcode tocFromHast} (a table of contents from the
+ * document's headings) are here, and the two that bind you to a UI framework live at
+ * their own entry points, so importing this module never puts one in your dependency
+ * graph.
  *
  * ```ts
  * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts"; // pulls @remix-run/ui
@@ -55,6 +56,7 @@ export {
 export { markdownSchema, mermaidSvgSchema, shikiSchema } from "./sanitize.ts";
 export { hastToDom, type HastToDomOptions } from "./hast_to_dom.ts";
 export { hastToHtml, type HastToHtmlOptions } from "./hast_to_html.ts";
+export { type TocEntry, tocFromHast } from "./toc.ts";
 
 /** Options for {@linkcode markdownToHast}. */
 export interface MarkdownToHastOptions {
