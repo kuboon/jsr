@@ -9,7 +9,7 @@
  *
  * const hast = await markdownToHast("# Hello");
  * const html = hastToHtml(hast);
- * // <h1 id="user-content-hello"><a href="#user-content-hello">Hello</a></h1>
+ * // <h1 id="h-hello"><a href="#h-hello">Hello</a></h1>
  * ```
  *
  * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml},
@@ -42,7 +42,8 @@ import rehypeSanitize from "rehype-sanitize";
 import { rehypeMermaid, type RehypeMermaidOptions } from "./mermaid.ts";
 import { rehypeShiki, type RehypeShikiOptions } from "./shiki.ts";
 import { rehypeHeadingLinks } from "./heading_links.ts";
-import { markdownSchema } from "./sanitize.ts";
+import { remarkHeadingId } from "./heading_id.ts";
+import { markdownSchema, rehypePrefixFragmentLinks } from "./sanitize.ts";
 
 export { rehypeMermaid, type RehypeMermaidOptions } from "./mermaid.ts";
 export { rehypeShiki, type RehypeShikiOptions } from "./shiki.ts";
@@ -76,6 +77,11 @@ export interface MarkdownToHastOptions {
  *   strikethrough, autolinks).
  * - Every heading gets a stable `id` slug and a self-link
  *   (`<a href="#slug">`) wrapping its content, via {@linkcode rehypeHeadingLinks}.
+ *   A trailing `{#custom-id}` (`## Install {#setup}`) overrides the slug.
+ * - Every id derived from the input (heading slugs, `{#custom-id}`s, GFM
+ *   footnotes) is prefixed with `h-` against DOM clobbering, and in-document
+ *   links are rewritten to match, so `[see](#setup)` still reaches
+ *   `id="h-setup"`.
  * - Mermaid code blocks (language `mermaid`) are rendered to SVG diagrams
  *   with `beautiful-mermaid`.
  * - Other fenced code blocks are syntax-highlighted with Shiki.
@@ -118,13 +124,19 @@ export async function markdownToHast(
   markdown: string,
   options: MarkdownToHastOptions = {},
 ): Promise<HastRoot> {
-  const processor = unified().use(remarkParse).use(remarkGfm);
+  const processor = unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkHeadingId);
   if (options.mdastTransform) {
     processor.use(() => options.mdastTransform!);
   }
   processor
-    .use(remarkRehype)
+    // Sanitizing prefixes ids on its own; letting remark-rehype prefix footnote ids too would
+    // double it.
+    .use(remarkRehype, { clobberPrefix: "" })
     .use(rehypeSanitize, markdownSchema)
+    .use(rehypePrefixFragmentLinks)
     .use(rehypeMermaid, options.mermaid)
     .use(rehypeShiki, options.shiki)
     .use(rehypeHeadingLinks);

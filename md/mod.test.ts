@@ -19,7 +19,7 @@ Deno.test("markdownToHast: renders basic markdown", async () => {
   const html = await render("# Hello\n\nSome **bold** text.");
   assertStringIncludes(
     html,
-    '<h1 id="user-content-hello"><a href="#user-content-hello">Hello</a></h1>',
+    '<h1 id="h-hello"><a href="#h-hello">Hello</a></h1>',
   );
   assertStringIncludes(html, "<strong>bold</strong>");
 });
@@ -94,14 +94,43 @@ Deno.test("markdownToHast: runs a custom mdast transformer", async () => {
   });
   assertStringIncludes(
     toHtml(hast),
-    '<h2 id="user-content-hello"><a href="#user-content-hello">Hello</a></h2>',
+    '<h2 id="h-hello"><a href="#h-hello">Hello</a></h2>',
   );
 });
 
 Deno.test("markdownToHast: heading ids are deduplicated", async () => {
   const html = await render("# Hello\n\n# Hello\n");
-  assertStringIncludes(html, 'id="user-content-hello"');
-  assertStringIncludes(html, 'id="user-content-hello-1"');
+  assertStringIncludes(html, 'id="h-hello"');
+  assertStringIncludes(html, 'id="h-hello-1"');
+});
+
+Deno.test("markdownToHast: {#custom-id} overrides the heading slug", async () => {
+  const html = await render("## Install **now** {#setup}\n");
+  assertStringIncludes(
+    html,
+    '<h2 id="h-setup"><a href="#h-setup">Install <strong>now</strong></a></h2>',
+  );
+});
+
+Deno.test("markdownToHast: an invalid {#...} marker stays as text", async () => {
+  const html = await render("## Bad {#no spaces}\n");
+  assertStringIncludes(html, 'id="h-bad-no-spaces"');
+  assertStringIncludes(html, "Bad {#no spaces}");
+});
+
+Deno.test("markdownToHast: in-document links follow the id prefix", async () => {
+  const html = await render(
+    "## Install {#setup}\n\n[in](#setup) [out](https://example.com/#a)\n",
+  );
+  assertStringIncludes(html, '<a href="#h-setup">in</a>');
+  assertStringIncludes(html, '<a href="https://example.com/#a">out</a>');
+});
+
+Deno.test("markdownToHast: footnote links point at their targets", async () => {
+  const html = await render("Text[^1]\n\n[^1]: Note\n");
+  assertStringIncludes(html, 'href="#h-fn-1" id="h-fnref-1"');
+  assertStringIncludes(html, '<li id="h-fn-1">');
+  assertStringIncludes(html, 'href="#h-fnref-1"');
 });
 
 Deno.test("rehypeShiki: a core highlighter replaces the bundled one", async () => {

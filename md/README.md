@@ -8,7 +8,13 @@
 - GitHub Flavored
   Markdown（テーブル、タスクリスト、取り消し線、オートリンク）に対応。
 - 各見出しに `id`（GitHub 互換のスラッグ）を自動付与し、見出し自身にリンクする
-  `<a href="#slug">` を設定。
+  `<a href="#slug">` を設定。見出し末尾に `{#custom-id}` と書けば
+  スラッグの代わりにその id を使う（`## インストール {#setup}`。Pandoc /
+  kramdown / Hugo と同じ記法。使える文字は `A-Za-z0-9_-`）。
+- 入力由来の id（見出し・`{#custom-id}`・脚注）にはすべて `h-`
+  を付与する（`{#setup}` → `id="h-setup"`）。本文中の `[リンク](#setup)`
+  もあわせて `#h-setup` に書き換えるので、Markdown 側ではプレフィックスを
+  意識せずにリンクできる。
 - `` ```mermaid `` コードブロックを
   [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) で SVG
   図として描画。
@@ -180,9 +186,10 @@ const hast = await markdownToHast(source, {
    を参照）で個別にサニタイズしてから本文に埋め込まれる。 `<foreignObject>` や
    `<script>`、イベントハンドラ属性 (`on*`)
    は許可リストに存在しないため必ず除去される。
-4. 見出しの `id` はユーザーが書いた見出しテキストから生成されるため、既定で
-   `user-content-` を付与する（GitHub と同じ規約）。これにより
-   `id="constructor"` のような値による DOM clobbering を防ぐ。
+4. 見出しや脚注の `id` はユーザーが書いたテキストから生成されるため、必ず `h-`
+   を付与する。ハイフンを含む名前はブラウザ組み込みのプロパティや JS
+   の識別子と決して一致しないので、`id="cookie"` のような値による DOM clobbering
+   を防げる。
 
 ## API
 
