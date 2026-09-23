@@ -1,4 +1,4 @@
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 import type { Root } from "hast";
 import { deepTextOf } from "./hast_utils.ts";
 
@@ -23,7 +23,8 @@ export interface TocEntry {
 
 /**
  * Extracts a table of contents from a hast tree produced by {@linkcode markdownToHast}: one
- * entry per heading (`h1`-`h6`), in document order.
+ * entry per heading (`h1`-`h6`), in document order. Headings inside the GFM footnote section
+ * are left out.
  *
  * Reads the `id` {@linkcode rehypeHeadingLinks} already assigned to each heading, rather than
  * recomputing a slug.
@@ -46,6 +47,8 @@ export interface TocEntry {
 export function tocFromHast(hast: Root): TocEntry[] {
   const entries: TocEntry[] = [];
   visit(hast, "element", (node) => {
+    // GFM's footnote section carries a visually hidden "Footnotes" heading.
+    if (node.properties.dataFootnotes !== undefined) return SKIP;
     const depth = HEADING_DEPTH[node.tagName];
     if (depth === undefined) return;
     const id = node.properties?.id;

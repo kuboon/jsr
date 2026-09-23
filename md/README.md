@@ -49,7 +49,7 @@
   のラッパー）。`react-dom` などでそのままレンダリングできる。
 - `tocFromHast(hast)` — 見出し（`h1`-`h6`）を文書順に列挙した目次
   （`{ depth, id, text }[]`）を返す。`id` は自動付与された `rehypeHeadingLinks`
-  のものをそのまま使う。
+  のものをそのまま使う。脚注セクションの見出し（Footnotes）は含めない。
 
 UI フレームワークに縛られる後ろ2つは、`@kuboon/md` 本体ではなく**それぞれの
 エントリポイント**にある。`@kuboon/md` を import しただけで使わない

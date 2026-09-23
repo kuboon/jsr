@@ -21,6 +21,13 @@ Deno.test("tocFromHast: collects text through inline formatting and the self-lin
   ]);
 });
 
+Deno.test("tocFromHast: leaves out the footnote section's heading", async () => {
+  const hast = await markdownToHast("# Title\n\nText[^1]\n\n[^1]: Note\n");
+  assertEquals(tocFromHast(hast), [
+    { depth: 1, id: "h-title", text: "Title" },
+  ]);
+});
+
 Deno.test("tocFromHast: returns an empty array for headless documents", async () => {
   const hast = await markdownToHast("Just a paragraph, no headings.");
   assertEquals(tocFromHast(hast), []);
