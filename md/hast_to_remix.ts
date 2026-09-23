@@ -47,7 +47,8 @@ function convert(node: HastNodes): RemixNode | undefined {
  *
  * @example
  * ```ts
- * import { hastToRemix, markdownToHast } from "@kuboon/md";
+ * import { markdownToHast } from "@kuboon/md";
+ * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts";
  *
  * const hast = await markdownToHast("# Hello");
  * const remix = hastToRemix(hast);

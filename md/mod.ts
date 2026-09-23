@@ -9,13 +9,14 @@
  *
  * const hast = await markdownToHast("# Hello");
  * const html = hastToHtml(hast);
- * // <h1 id="user-content-hello"><a href="#user-content-hello">Hello</a></h1>
+ * // <h1 id="hello-"><a href="#hello-">Hello</a></h1>
  * ```
  *
- * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml}
- * and {@linkcode hastToDom} are here, and the two that bind you to a UI framework
- * live at their own entry points, so importing this module never puts one in your
- * dependency graph.
+ * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml},
+ * {@linkcode hastToDom}, and {@linkcode tocFromHast} (a table of contents from the
+ * document's headings) are here, and the two that bind you to a UI framework live at
+ * their own entry points, so importing this module never puts one in your dependency
+ * graph.
  *
  * ```ts
  * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts"; // pulls @remix-run/ui
@@ -40,10 +41,8 @@ import remarkRehype from "remark-rehype";
 import rehypeSanitize from "rehype-sanitize";
 import { rehypeMermaid, type RehypeMermaidOptions } from "./mermaid.ts";
 import { rehypeShiki, type RehypeShikiOptions } from "./shiki.ts";
-import {
-  rehypeHeadingLinks,
-  type RehypeHeadingLinksOptions,
-} from "./heading_links.ts";
+import { rehypeHeadingLinks } from "./heading_links.ts";
+import { remarkHeadingId } from "./heading_id.ts";
 import { markdownSchema } from "./sanitize.ts";
 
 export { rehypeMermaid, type RehypeMermaidOptions } from "./mermaid.ts";
@@ -55,6 +54,7 @@ export {
 export { markdownSchema, mermaidSvgSchema, shikiSchema } from "./sanitize.ts";
 export { hastToDom, type HastToDomOptions } from "./hast_to_dom.ts";
 export { hastToHtml, type HastToHtmlOptions } from "./hast_to_html.ts";
+export { type TocEntry, tocFromHast } from "./toc.ts";
 
 /** Options for {@linkcode markdownToHast}. */
 export interface MarkdownToHastOptions {
@@ -62,11 +62,6 @@ export interface MarkdownToHastOptions {
   mermaid?: RehypeMermaidOptions;
   /** Options passed to Shiki (theme(s), default language). */
   shiki?: RehypeShikiOptions;
-  /**
-   * Options for the automatic heading `id`s and self-links. Pass `false`
-   * to disable heading anchors entirely.
-   */
-  headingLinks?: RehypeHeadingLinksOptions | false;
   /**
    * An mdast transformer run right after parsing (GFM included), before
    * the tree is converted to hast. Use this to plug in remark plugins
@@ -81,8 +76,13 @@ export interface MarkdownToHastOptions {
  * - GitHub Flavored Markdown is supported (tables, task lists,
  *   strikethrough, autolinks).
  * - Every heading gets a stable `id` slug and a self-link
- *   (`<a href="#slug">`) wrapping its content — see
- *   {@linkcode RehypeHeadingLinksOptions} to customize or disable this.
+ *   (`<a href="#slug">`) wrapping its content, via {@linkcode rehypeHeadingLinks}.
+ *   A trailing `{#custom-id}` (`## Install {#setup}`) overrides the slug.
+ * - Against DOM clobbering, every id without a hyphen gets one appended
+ *   (`## Install` → `id="install-"`; `## Getting Started` stays
+ *   `getting-started`), and in-document links to it are repointed, so
+ *   `[see](#install)` still reaches it. Links to ids not in the document
+ *   (e.g. the host page's `#top`) are left alone.
  * - Mermaid code blocks (language `mermaid`) are rendered to SVG diagrams
  *   with `beautiful-mermaid`.
  * - Other fenced code blocks are syntax-highlighted with Shiki.
@@ -125,18 +125,21 @@ export async function markdownToHast(
   markdown: string,
   options: MarkdownToHastOptions = {},
 ): Promise<HastRoot> {
-  const processor = unified().use(remarkParse).use(remarkGfm);
+  const processor = unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use(remarkHeadingId);
   if (options.mdastTransform) {
     processor.use(() => options.mdastTransform!);
   }
   processor
-    .use(remarkRehype)
+    // rehypeHeadingLinks makes every id clobber-safe at the end; prefixing footnote ids here too
+    // would only lengthen them.
+    .use(remarkRehype, { clobberPrefix: "" })
     .use(rehypeSanitize, markdownSchema)
     .use(rehypeMermaid, options.mermaid)
-    .use(rehypeShiki, options.shiki);
-  if (options.headingLinks !== false) {
-    processor.use(rehypeHeadingLinks, options.headingLinks);
-  }
+    .use(rehypeShiki, options.shiki)
+    .use(rehypeHeadingLinks);
 
   const mdast = processor.parse(markdown);
   return await processor.run(mdast) as HastRoot;

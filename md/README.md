@@ -8,7 +8,15 @@
 - GitHub Flavored
   Markdown（テーブル、タスクリスト、取り消し線、オートリンク）に対応。
 - 各見出しに `id`（GitHub 互換のスラッグ）を自動付与し、見出し自身にリンクする
-  `<a href="#slug">` を設定（無効化・カスタマイズ可）。
+  `<a href="#slug">` を設定。見出し末尾に `{#custom-id}` と書けば
+  スラッグの代わりにその id を使う（`## インストール {#setup}`。Pandoc /
+  kramdown / Hugo と同じ記法。使える文字は `A-Za-z0-9_-`）。
+- 入力由来の id（見出し・`{#custom-id}`・脚注）のうち、ハイフンを含まない
+  ものには末尾に `-` を付ける（`## Install` → `id="install-"`、`{#setup}` →
+  `id="setup-"`。`## Getting Started` → `getting-started` はそのまま）。
+  本文中の `[リンク](#setup)` のうち、文書内の id を指すものはあわせて `#setup-`
+  に書き換えるので、Markdown 側では意識せずにリンクできる。
+  文書外のアンカー（ホストページの `#top` など）へのリンクは変更しない。
 - `` ```mermaid `` コードブロックを
   [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) で SVG
   図として描画。
@@ -41,6 +49,9 @@
 - `hastToReact(hast, options?)`（`@kuboon/md/hast_to_react.ts`）— React
   の要素ツリーに変換（[`hast-util-to-jsx-runtime`](https://github.com/syntax-tree/hast-util-to-jsx-runtime)
   のラッパー）。`react-dom` などでそのままレンダリングできる。
+- `tocFromHast(hast)` — 見出し（`h1`-`h6`）を文書順に列挙した目次
+  （`{ depth, id, text }[]`）を返す。`id` は自動付与された `rehypeHeadingLinks`
+  のものをそのまま使う。脚注セクションの見出し（Footnotes）は含めない。
 
 UI フレームワークに縛られる後ろ2つは、`@kuboon/md` 本体ではなく**それぞれの
 エントリポイント**にある。`@kuboon/md` を import しただけで使わない
@@ -106,8 +117,6 @@ const hast = await markdownToHast("# Hello", {
   // shiki: { themes: { light: "github-light", dark: "github-dark" } },
   // 自前の highlighter を渡してバンドルを削ることもできる（下記参照）
   // shiki: { highlighter, theme: "github-dark" },
-  // 見出し ID・自己リンクの挙動を変える（あるいは headingLinks: false で無効化）
-  headingLinks: { prefix: "user-content-", behavior: "wrap" },
   // remark-rehype で hast に変換する直前、mdast に対して好きな変換をかけられる
   mdastTransform: (tree) => {
     visit(tree, "heading", (node) => {
@@ -179,9 +188,11 @@ const hast = await markdownToHast(source, {
    を参照）で個別にサニタイズしてから本文に埋め込まれる。 `<foreignObject>` や
    `<script>`、イベントハンドラ属性 (`on*`)
    は許可リストに存在しないため必ず除去される。
-4. 見出しの `id` はユーザーが書いた見出しテキストから生成されるため、既定で
-   `user-content-` を付与する（GitHub と同じ規約）。これにより
-   `id="constructor"` のような値による DOM clobbering を防ぐ。
+4. 見出しや脚注の `id` はユーザーが書いたテキストから生成されるため、必ず
+   ハイフンを含むようにする（含まなければ末尾に `-`
+   を付ける）。ハイフンを含む名前は JS の識別子になれず、`window.config`
+   のようなグローバル参照やブラウザ組み込みのプロパティと決して一致しないので、
+   `id="config"` のような値による DOM clobbering を防げる。
 
 ## API
 
@@ -191,11 +202,13 @@ const hast = await markdownToHast(source, {
   プラグイン単体。
 - `rehypeShiki(options?)` — コードブロックを Shiki でハイライトする rehype
   プラグイン単体。
-- `rehypeHeadingLinks(options?)` — 見出しに `id` と自己リンクを付与する rehype
-  プラグイン単体。
+- `rehypeHeadingLinks(options?)` — 見出しに `id` と自己リンクを付与し、
+  ツリー内の全 id を上記のルールで clobbering 安全にする rehype
+  プラグイン単体。全 id が出そろった最後に実行する。
 - `markdownSchema` / `mermaidSvgSchema` / `shikiSchema` —
   それぞれの用途で使うサニタイズスキーマ。独自の unified パイプラインを組む際に
-  再利用できる。
+  再利用できる。`markdownSchema` は id をそのまま通すので、後段で
+  `rehypeHeadingLinks` を必ず実行すること。
 - `hastToHtml(hast, options?)` / `./hast_to_html.ts` — hast を HTML
   文字列に変換する。
 - `hastToDom(hast, options?)` / `./hast_to_dom.ts` — hast を実 DOM
@@ -204,6 +217,8 @@ const hast = await markdownToHast(source, {
   変換する。**本体からは export されない**（`@remix-run/ui` を引くため）。
 - `hastToReact(hast, options?)` / `./hast_to_react.ts` — hast を React
   の要素ツリーに変換する。**本体からは export されない**（`react` を引くため）。
+- `tocFromHast(hast)` / `./toc.ts` — hast
+  から見出しの目次（`{ depth, id, text }[]`）を抽出する。
 
 ## Links
 

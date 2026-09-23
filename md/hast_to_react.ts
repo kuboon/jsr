@@ -28,7 +28,8 @@ export type HastToReactOptions = Omit<
  * @example
  * ```ts
  * import { renderToStaticMarkup } from "react-dom/server";
- * import { hastToReact, markdownToHast } from "@kuboon/md";
+ * import { markdownToHast } from "@kuboon/md";
+ * import { hastToReact } from "@kuboon/md/hast_to_react.ts";
  *
  * const hast = await markdownToHast("# Hello");
  * const html = renderToStaticMarkup(hastToReact(hast)); // "<h1>Hello</h1>"

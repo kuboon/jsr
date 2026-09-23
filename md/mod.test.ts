@@ -19,7 +19,7 @@ Deno.test("markdownToHast: renders basic markdown", async () => {
   const html = await render("# Hello\n\nSome **bold** text.");
   assertStringIncludes(
     html,
-    '<h1 id="user-content-hello"><a href="#user-content-hello">Hello</a></h1>',
+    '<h1 id="hello-"><a href="#hello-">Hello</a></h1>',
   );
   assertStringIncludes(html, "<strong>bold</strong>");
 });
@@ -94,27 +94,57 @@ Deno.test("markdownToHast: runs a custom mdast transformer", async () => {
   });
   assertStringIncludes(
     toHtml(hast),
-    '<h2 id="user-content-hello"><a href="#user-content-hello">Hello</a></h2>',
+    '<h2 id="hello-"><a href="#hello-">Hello</a></h2>',
   );
 });
 
 Deno.test("markdownToHast: heading ids are deduplicated", async () => {
   const html = await render("# Hello\n\n# Hello\n");
-  assertStringIncludes(html, 'id="user-content-hello"');
-  assertStringIncludes(html, 'id="user-content-hello-1"');
+  assertStringIncludes(html, 'id="hello-"');
+  assertStringIncludes(html, 'id="hello-1"');
 });
 
-Deno.test("markdownToHast: headingLinks can be disabled", async () => {
-  const html = await render("# Hello\n", { headingLinks: false });
-  assertStringIncludes(html, "<h1>Hello</h1>");
+Deno.test("markdownToHast: {#custom-id} overrides the heading slug", async () => {
+  const html = await render("## Install **now** {#setup}\n");
+  assertStringIncludes(
+    html,
+    '<h2 id="setup-"><a href="#setup-">Install <strong>now</strong></a></h2>',
+  );
 });
 
-Deno.test("markdownToHast: headingLinks prefix and behavior are configurable", async () => {
-  const html = await render("# Hello\n", {
-    headingLinks: { prefix: "", behavior: "append" },
-  });
-  assertStringIncludes(html, '<h1 id="hello">Hello<a');
-  assertStringIncludes(html, 'href="#hello">');
+Deno.test("markdownToHast: an invalid {#...} marker stays as text", async () => {
+  const html = await render("## Bad {#no spaces}\n");
+  assertStringIncludes(html, 'id="bad-no-spaces"');
+  assertStringIncludes(html, "Bad {#no spaces}");
+});
+
+Deno.test("markdownToHast: only ids without a hyphen get one appended", async () => {
+  const html = await render("## Getting Started\n\n## インストール\n");
+  assertStringIncludes(html, 'id="getting-started"');
+  assertStringIncludes(html, 'id="インストール-"');
+});
+
+Deno.test("markdownToHast: links to renamed ids follow them, others are left alone", async () => {
+  const html = await render(
+    "## Install {#setup}\n\n## インストール\n\n" +
+      "[in](#setup) [jp](#インストール) [top](#top) [out](https://example.com/#setup)\n",
+  );
+  assertStringIncludes(html, '<a href="#setup-">in</a>');
+  assertStringIncludes(html, '<a href="#インストール-">jp</a>');
+  assertStringIncludes(html, '<a href="#top">top</a>');
+  assertStringIncludes(html, '<a href="https://example.com/#setup">out</a>');
+});
+
+Deno.test("markdownToHast: mermaid's own SVG ids are left alone", async () => {
+  const html = await render("```mermaid\ngraph TD\nA-->B\n```\n");
+  assertStringIncludes(html, 'id="arrowhead"');
+});
+
+Deno.test("markdownToHast: footnote links point at their targets", async () => {
+  const html = await render("Text[^1]\n\n[^1]: Note\n");
+  assertStringIncludes(html, 'href="#fn-1" id="fnref-1"');
+  assertStringIncludes(html, '<li id="fn-1">');
+  assertStringIncludes(html, 'href="#fnref-1"');
 });
 
 Deno.test("rehypeShiki: a core highlighter replaces the bundled one", async () => {

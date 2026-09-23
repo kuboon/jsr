@@ -4,8 +4,16 @@ import type { Schema } from "hast-util-sanitize";
 /**
  * Sanitize schema for the Markdown-authored parts of the document
  * (headings, links, tables, GFM footnotes, ...).
+ *
+ * Unlike `rehype-sanitize`'s default, `id`s and the ARIA attributes that
+ * reference them pass through unprefixed: {@linkcode rehypeHeadingLinks},
+ * run after every id is in place, makes them clobber-safe instead, so it can
+ * keep in-document links pointing at them.
  */
-export const markdownSchema: Schema = defaultSchema;
+export const markdownSchema: Schema = {
+  ...defaultSchema,
+  clobber: ["name"],
+};
 
 /**
  * Sanitize schema for SVG produced by our own Mermaid renderer.
@@ -13,7 +21,7 @@ export const markdownSchema: Schema = defaultSchema;
  * `clobber`/`clobberPrefix` are disabled here: the ids are fixed strings
  * chosen by the renderer (e.g. `arrowhead`), never derived from user
  * input, and `marker-end="url(#arrowhead)"`-style references would break
- * if the id got the usual `user-content-` clobber prefix applied.
+ * if the id got a clobber prefix applied.
  */
 export const mermaidSvgSchema: Schema = {
   clobber: [],
