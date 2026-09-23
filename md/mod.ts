@@ -9,7 +9,7 @@
  *
  * const hast = await markdownToHast("# Hello");
  * const html = hastToHtml(hast);
- * // <h1 id="h-hello"><a href="#h-hello">Hello</a></h1>
+ * // <h1 id="hello-"><a href="#hello-">Hello</a></h1>
  * ```
  *
  * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml},
@@ -43,7 +43,7 @@ import { rehypeMermaid, type RehypeMermaidOptions } from "./mermaid.ts";
 import { rehypeShiki, type RehypeShikiOptions } from "./shiki.ts";
 import { rehypeHeadingLinks } from "./heading_links.ts";
 import { remarkHeadingId } from "./heading_id.ts";
-import { markdownSchema, rehypePrefixFragmentLinks } from "./sanitize.ts";
+import { markdownSchema } from "./sanitize.ts";
 
 export { rehypeMermaid, type RehypeMermaidOptions } from "./mermaid.ts";
 export { rehypeShiki, type RehypeShikiOptions } from "./shiki.ts";
@@ -78,10 +78,11 @@ export interface MarkdownToHastOptions {
  * - Every heading gets a stable `id` slug and a self-link
  *   (`<a href="#slug">`) wrapping its content, via {@linkcode rehypeHeadingLinks}.
  *   A trailing `{#custom-id}` (`## Install {#setup}`) overrides the slug.
- * - Every id derived from the input (heading slugs, `{#custom-id}`s, GFM
- *   footnotes) is prefixed with `h-` against DOM clobbering, and in-document
- *   links are rewritten to match, so `[see](#setup)` still reaches
- *   `id="h-setup"`.
+ * - Against DOM clobbering, every id without a hyphen gets one appended
+ *   (`## Install` → `id="install-"`; `## Getting Started` stays
+ *   `getting-started`), and in-document links to it are repointed, so
+ *   `[see](#install)` still reaches it. Links to ids not in the document
+ *   (e.g. the host page's `#top`) are left alone.
  * - Mermaid code blocks (language `mermaid`) are rendered to SVG diagrams
  *   with `beautiful-mermaid`.
  * - Other fenced code blocks are syntax-highlighted with Shiki.
@@ -132,11 +133,10 @@ export async function markdownToHast(
     processor.use(() => options.mdastTransform!);
   }
   processor
-    // Sanitizing prefixes ids on its own; letting remark-rehype prefix footnote ids too would
-    // double it.
+    // rehypeHeadingLinks makes every id clobber-safe at the end; prefixing footnote ids here too
+    // would only lengthen them.
     .use(remarkRehype, { clobberPrefix: "" })
     .use(rehypeSanitize, markdownSchema)
-    .use(rehypePrefixFragmentLinks)
     .use(rehypeMermaid, options.mermaid)
     .use(rehypeShiki, options.shiki)
     .use(rehypeHeadingLinks);

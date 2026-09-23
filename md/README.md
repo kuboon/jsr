@@ -11,10 +11,12 @@
   `<a href="#slug">` を設定。見出し末尾に `{#custom-id}` と書けば
   スラッグの代わりにその id を使う（`## インストール {#setup}`。Pandoc /
   kramdown / Hugo と同じ記法。使える文字は `A-Za-z0-9_-`）。
-- 入力由来の id（見出し・`{#custom-id}`・脚注）にはすべて `h-`
-  を付与する（`{#setup}` → `id="h-setup"`）。本文中の `[リンク](#setup)`
-  もあわせて `#h-setup` に書き換えるので、Markdown 側ではプレフィックスを
-  意識せずにリンクできる。
+- 入力由来の id（見出し・`{#custom-id}`・脚注）のうち、ハイフンを含まない
+  ものには末尾に `-` を付ける（`## Install` → `id="install-"`、`{#setup}` →
+  `id="setup-"`。`## Getting Started` → `getting-started` はそのまま）。
+  本文中の `[リンク](#setup)` のうち、文書内の id を指すものはあわせて `#setup-`
+  に書き換えるので、Markdown 側では意識せずにリンクできる。
+  文書外のアンカー（ホストページの `#top` など）へのリンクは変更しない。
 - `` ```mermaid `` コードブロックを
   [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) で SVG
   図として描画。
@@ -186,10 +188,11 @@ const hast = await markdownToHast(source, {
    を参照）で個別にサニタイズしてから本文に埋め込まれる。 `<foreignObject>` や
    `<script>`、イベントハンドラ属性 (`on*`)
    は許可リストに存在しないため必ず除去される。
-4. 見出しや脚注の `id` はユーザーが書いたテキストから生成されるため、必ず `h-`
-   を付与する。ハイフンを含む名前はブラウザ組み込みのプロパティや JS
-   の識別子と決して一致しないので、`id="cookie"` のような値による DOM clobbering
-   を防げる。
+4. 見出しや脚注の `id` はユーザーが書いたテキストから生成されるため、必ず
+   ハイフンを含むようにする（含まなければ末尾に `-`
+   を付ける）。ハイフンを含む名前は JS の識別子になれず、`window.config`
+   のようなグローバル参照やブラウザ組み込みのプロパティと決して一致しないので、
+   `id="config"` のような値による DOM clobbering を防げる。
 
 ## API
 
@@ -199,11 +202,13 @@ const hast = await markdownToHast(source, {
   プラグイン単体。
 - `rehypeShiki(options?)` — コードブロックを Shiki でハイライトする rehype
   プラグイン単体。
-- `rehypeHeadingLinks(options?)` — 見出しに `id` と自己リンクを付与する rehype
-  プラグイン単体。
+- `rehypeHeadingLinks(options?)` — 見出しに `id` と自己リンクを付与し、
+  ツリー内の全 id を上記のルールで clobbering 安全にする rehype
+  プラグイン単体。全 id が出そろった最後に実行する。
 - `markdownSchema` / `mermaidSvgSchema` / `shikiSchema` —
   それぞれの用途で使うサニタイズスキーマ。独自の unified パイプラインを組む際に
-  再利用できる。
+  再利用できる。`markdownSchema` は id をそのまま通すので、後段で
+  `rehypeHeadingLinks` を必ず実行すること。
 - `hastToHtml(hast, options?)` / `./hast_to_html.ts` — hast を HTML
   文字列に変換する。
 - `hastToDom(hast, options?)` / `./hast_to_dom.ts` — hast を実 DOM

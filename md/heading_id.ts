@@ -9,8 +9,8 @@ const CUSTOM_ID = /\s*\{#([A-Za-z0-9_-]+)\}\s*$/;
  * marker is removed from the heading text and the id is set on the heading.
  * Only `[A-Za-z0-9_-]` ids are recognized; anything else stays as text.
  *
- * The id is set unprefixed — sanitizing adds the usual clobber prefix, so
- * `{#setup}` ends up as `id="h-setup"`, and `[link](#setup)` still reaches it.
+ * Like any other id, it's made clobber-safe by {@linkcode rehypeHeadingLinks}:
+ * `{#setup}` ends up as `id="setup-"`, and `[link](#setup)` still reaches it.
  */
 export function remarkHeadingId(): (tree: Root) => void {
   return (tree) => {

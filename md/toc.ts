@@ -36,8 +36,8 @@ export interface TocEntry {
  * const hast = await markdownToHast("# Title\n\n## Section");
  * const toc = tocFromHast(hast);
  * // [
- * //   { depth: 1, id: "h-title", text: "Title" },
- * //   { depth: 2, id: "h-section", text: "Section" },
+ * //   { depth: 1, id: "title-", text: "Title" },
+ * //   { depth: 2, id: "section-", text: "Section" },
  * // ]
  * ```
  *
