@@ -1,11 +1,13 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { parseHTML } from "linkedom";
+import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { markdownToHast } from "./mod.ts";
 import { hastToHtml } from "./hast_to_html.ts";
 import { hastToDom } from "./hast_to_dom.ts";
 import { hastToElement } from "./hast_to_element.ts";
-import { hastToReact } from "./hast_to_react.ts";
+import { hastToJsx } from "./hast_to_jsx.ts";
 
 Deno.test("hastToHtml: serializes a hast tree", async () => {
   const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
@@ -61,9 +63,13 @@ Deno.test("hastToElement: nests children through the factory", async () => {
   assertEquals((children[1] as FakeElement).type, "strong");
 });
 
-Deno.test("hastToReact: builds a React element tree", async () => {
+Deno.test("hastToJsx: builds elements with the supplied JSX runtime", async () => {
   const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
-  const html = renderToStaticMarkup(hastToReact(hast));
+  // React's real runtime, to prove the seam works with the thing it was
+  // written for — the package itself no longer imports it.
+  const html = renderToStaticMarkup(
+    hastToJsx(hast, { Fragment, jsx, jsxs }) as ReactNode,
+  );
   assertStringIncludes(
     html,
     '<h1 id="hi-"><a href="#hi-">Hi</a></h1>',

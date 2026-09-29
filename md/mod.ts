@@ -14,13 +14,13 @@
  *
  * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml},
  * {@linkcode hastToDom}, and {@linkcode tocFromHast} (a table of contents from the
- * document's headings) are here, and the two that bind you to a UI framework live at
- * their own entry points, so importing this module never puts one in your dependency
- * graph.
+ * document's headings) are here, and the two that build UI elements live at their own
+ * entry points. Neither depends on a UI library — each takes the element factory or
+ * JSX runtime from the caller, so there is exactly one copy of it, the caller's.
  *
  * ```ts
  * import { hastToElement } from "@kuboon/md/hast_to_element.ts"; // takes your createElement
- * import { hastToReact } from "@kuboon/md/hast_to_react.ts"; // pulls react
+ * import { hastToJsx } from "@kuboon/md/hast_to_jsx.ts";         // takes your JSX runtime
  * ```
  *
  * > [!IMPORTANT]
@@ -93,7 +93,7 @@ export interface MarkdownToHastOptions {
  *   code — is passed through `rehype-sanitize` before being returned.
  *
  * Convert the result yourself (e.g. with {@linkcode hastToHtml}) if you
- * need an HTML string, or with {@linkcode hastToDom}; `hastToReact` and
+ * need an HTML string, or with {@linkcode hastToDom}; `hastToJsx` and
  * `hastToElement` are at their own entry points.
  *
  * @example

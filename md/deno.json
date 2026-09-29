@@ -7,7 +7,7 @@
     "./hast_to_dom.ts": "./hast_to_dom.ts",
     "./hast_to_html.ts": "./hast_to_html.ts",
     "./hast_to_element.ts": "./hast_to_element.ts",
-    "./hast_to_react.ts": "./hast_to_react.ts"
+    "./hast_to_jsx.ts": "./hast_to_jsx.ts"
   },
   "tasks": {
     "test": "deno test --doc --allow-read --allow-env --allow-net"
