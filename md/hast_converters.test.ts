@@ -32,17 +32,33 @@ Deno.test("hastToDom: renders into a DOM fragment", async () => {
   assertStringIncludes(container.innerHTML, "<strong>bold</strong>");
 });
 
-Deno.test("hastToRemix: builds a Remix UI element tree", async () => {
+/**
+ * Stands in for `@remix-run/ui`'s `createElement`, so this test needs no UI
+ * runtime — which is the point of taking the factory as an argument.
+ */
+type FakeElement = { type: string; props: Record<string, unknown> };
+const fakeCreateElement = (
+  type: string,
+  props: Record<string, unknown>,
+  ...children: unknown[]
+): FakeElement => ({ type, props: { ...props, children } });
+
+Deno.test("hastToRemix: builds an element tree with the supplied factory", async () => {
   const hast = await markdownToHast(
     "Some **bold** text with [a link](https://example.com).",
   );
-  const remix = hastToRemix(hast) as unknown[];
-  const paragraph = remix[0] as {
-    type: string;
-    props: { children: unknown[] };
-  };
+  const remix = hastToRemix(hast, fakeCreateElement) as FakeElement[];
+  const paragraph = remix[0];
   assertEquals(paragraph.type, "p");
   assertStringIncludes(JSON.stringify(paragraph), "https://example.com");
+});
+
+Deno.test("hastToRemix: nests children through the factory", async () => {
+  const hast = await markdownToHast("Some **bold** text.");
+  const [paragraph] = hastToRemix(hast, fakeCreateElement) as FakeElement[];
+  const children = paragraph.props.children as (FakeElement | string)[];
+  assertEquals(children[0], "Some ");
+  assertEquals((children[1] as FakeElement).type, "strong");
 });
 
 Deno.test("hastToReact: builds a React element tree", async () => {

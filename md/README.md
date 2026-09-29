@@ -42,10 +42,10 @@
   ノードに変換（[`hast-util-to-dom`](https://github.com/syntax-tree/hast-util-to-dom)
   のラッパー）。ブラウザの `document`、または `options.document` 経由で渡した
   DOM 実装（`linkedom` など）を使う。
-- `hastToRemix(hast)`（`@kuboon/md/hast_to_remix.ts`）—
+- `hastToRemix(hast, createElement)`（`@kuboon/md/hast_to_remix.ts`）—
   [Remix UI](https://github.com/remix-run/remix/tree/main/packages/ui)
-  の要素ツリー（`RemixNode`）に変換。`createRoot(...).render(...)`
-  にそのまま渡せる。
+  の要素ツリーに変換。`createRoot(...).render(...)`
+  にそのまま渡せる。`createElement` は**呼び出し側が渡す**（後述）。
 - `hastToReact(hast, options?)`（`@kuboon/md/hast_to_react.ts`）— React
   の要素ツリーに変換（[`hast-util-to-jsx-runtime`](https://github.com/syntax-tree/hast-util-to-jsx-runtime)
   のラッパー）。`react-dom` などでそのままレンダリングできる。
@@ -54,8 +54,18 @@
   のものをそのまま使う。脚注セクションの見出し（Footnotes）は含めない。
 
 UI フレームワークに縛られる後ろ2つは、`@kuboon/md` 本体ではなく**それぞれの
-エントリポイント**にある。`@kuboon/md` を import しただけで使わない
-`@remix-run/ui` や `react` が依存グラフに入らないようにするため。
+エントリポイント**にある。`@kuboon/md` を import しただけで使わない `react`
+が依存グラフに入らないようにするため。
+
+`hastToRemix` はさらに一歩進んで、`@remix-run/ui` に**まったく依存しない**。
+`createElement` を引数で受け取る。ライブラリが UI ランタイムを import すると
+バージョン範囲を固定することになるが、`@remix-run/ui` の範囲は minor をまたいで
+重ならない —— このパッケージより 1 つ先の minor を使っている利用側では
+**ランタイムが二重に解決され**、モジュールレベルの状態がエラーも無く二つ
+存在することになる。factory を引数にすれば、コピーは利用側の 1 つだけになる。
+
+名前以外に Remix 固有のものは無いので、`createElement(type, props, ...children)`
+の形をした factory なら何でも使える。
 
 ## インストール
 
@@ -90,6 +100,7 @@ const html = toHtml(hast);
 `@kuboon/md` が提供する変換関数を使う場合:
 
 ```ts ignore
+import { createElement } from "@remix-run/ui";
 import { hastToDom, hastToHtml, markdownToHast } from "@kuboon/md";
 import { hastToRemix } from "@kuboon/md/hast_to_remix.ts";
 import { hastToReact } from "@kuboon/md/hast_to_react.ts";
@@ -98,7 +109,7 @@ const hast = await markdownToHast("# Hello");
 
 const html = hastToHtml(hast);
 const dom = hastToDom(hast); // ブラウザの document を使う
-const remix = hastToRemix(hast); // createRoot(...).render(remix) に渡せる
+const remix = hastToRemix(hast, createElement); // createRoot(...).render(remix) に渡せる
 const react = hastToReact(hast); // <ReactDOM.render> などにそのまま渡せる
 ```
 
@@ -213,8 +224,10 @@ const hast = await markdownToHast(source, {
   文字列に変換する。
 - `hastToDom(hast, options?)` / `./hast_to_dom.ts` — hast を実 DOM
   ノードに変換する。
-- `hastToRemix(hast)` / `./hast_to_remix.ts` — hast を Remix UI の要素ツリーに
-  変換する。**本体からは export されない**（`@remix-run/ui` を引くため）。
+- `hastToRemix(hast, createElement)` / `./hast_to_remix.ts` — hast を Remix UI
+  の要素ツリーに変換する。`createElement` は呼び出し側が渡すので、この
+  パッケージは `@remix-run/ui` に依存しない。**本体からは export されない**
+  （エントリポイントを分けて、使わない利用側のグラフに入れないため）。
 - `hastToReact(hast, options?)` / `./hast_to_react.ts` — hast を React
   の要素ツリーに変換する。**本体からは export されない**（`react` を引くため）。
 - `tocFromHast(hast)` / `./toc.ts` — hast

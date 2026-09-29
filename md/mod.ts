@@ -19,7 +19,7 @@
  * graph.
  *
  * ```ts
- * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts"; // pulls @remix-run/ui
+ * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts"; // takes your createElement
  * import { hastToReact } from "@kuboon/md/hast_to_react.ts"; // pulls react
  * ```
  *
