@@ -1,13 +1,12 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { parseHTML } from "linkedom";
-import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+import { createElement } from "react";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { markdownToHast } from "./mod.ts";
 import { hastToHtml } from "./hast_to_html.ts";
 import { hastToDom } from "./hast_to_dom.ts";
 import { hastToElement } from "./hast_to_element.ts";
-import { hastToJsx } from "./hast_to_jsx.ts";
 
 Deno.test("hastToHtml: serializes a hast tree", async () => {
   const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
@@ -63,16 +62,48 @@ Deno.test("hastToElement: nests children through the factory", async () => {
   assertEquals((children[1] as FakeElement).type, "strong");
 });
 
-Deno.test("hastToJsx: builds elements with the supplied JSX runtime", async () => {
-  const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
-  // React's real runtime, to prove the seam works with the thing it was
-  // written for — the package itself no longer imports it.
+/**
+ * React's `createElement` has the same shape, so it can be injected directly —
+ * but React wants DOM prop names and a style *object*, while hast carries some
+ * raw HTML attribute names (the Shiki path) and a style *string*. This is the
+ * normalizing factory the README documents for React consumers.
+ */
+function reactFactory(
+  type: string,
+  props: Record<string, unknown>,
+  ...children: unknown[]
+) {
+  const fixed: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(props)) {
+    if (key === "style" && typeof value === "string") {
+      fixed.style = Object.fromEntries(
+        value.split(";").filter(Boolean).map((rule) => {
+          const [name, ...rest] = rule.split(":");
+          return [
+            name.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
+            rest.join(":").trim(),
+          ];
+        }),
+      );
+    } else if (key === "class") fixed.className = value;
+    else if (key === "tabindex") fixed.tabIndex = value;
+    else fixed[key] = value;
+  }
+  return createElement(type, fixed, ...children);
+}
+
+Deno.test("hastToElement: React's createElement works through a normalizing factory", async () => {
+  // Real React, to prove the seam works with it — the package itself no longer
+  // imports React at all.
+  const hast = await markdownToHast(
+    "# Hi\n\nSome **bold** text.\n\n```ts\nconst x = 1;\n```",
+  );
   const html = renderToStaticMarkup(
-    hastToJsx(hast, { Fragment, jsx, jsxs }) as ReactNode,
+    hastToElement(hast, reactFactory) as ReactNode,
   );
-  assertStringIncludes(
-    html,
-    '<h1 id="hi-"><a href="#hi-">Hi</a></h1>',
-  );
+  assertStringIncludes(html, '<h1 id="hi-"><a href="#hi-">Hi</a></h1>');
   assertStringIncludes(html, "<strong>bold</strong>");
+  // the Shiki block is what breaks without the normalization
+  assertStringIncludes(html, 'class="shiki github-dark"');
+  assertStringIncludes(html, "background-color:#24292e");
 });
