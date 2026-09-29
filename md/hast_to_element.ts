@@ -11,8 +11,9 @@
  * error to say so. Taking the factory as an argument leaves exactly one copy,
  * the consumer's, whichever version that is.
  *
- * Nothing here is Remix-specific beyond the name. Any `createElement(type,
- * props, ...children)` factory works.
+ * Nothing here is framework-specific: any `createElement(type, props,
+ * ...children)` factory works. `@remix-run/ui`'s is the one it was written
+ * for, and the example below uses it.
  *
  * @module
  */
@@ -32,7 +33,7 @@ export type CreateElement<Element> = (
 ) => Element;
 
 /**
- * What {@linkcode hastToRemix} returns: an element, a text string, or a list of
+ * What {@linkcode hastToElement} returns: an element, a text string, or a list of
  * them. Assignable to `RemixNode` when the factory is Remix's.
  *
  * @typeParam Element The element type the factory returns.
@@ -88,10 +89,10 @@ function convert<Element>(
  * ```ts ignore
  * import { createElement } from "@remix-run/ui";
  * import { markdownToHast } from "@kuboon/md";
- * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts";
+ * import { hastToElement } from "@kuboon/md/hast_to_element.ts";
  *
  * const hast = await markdownToHast("# Hello");
- * const remix = hastToRemix(hast, createElement);
+ * const remix = hastToElement(hast, createElement);
  * // createRoot(container).render(remix); // from "@remix-run/ui"
  * ```
  *
@@ -100,7 +101,7 @@ function convert<Element>(
  * @param createElement The element factory to build with.
  * @returns An element tree built by `createElement`.
  */
-export function hastToRemix<Element>(
+export function hastToElement<Element>(
   tree: HastNodes,
   createElement: CreateElement<Element>,
 ): ElementTree<Element> {

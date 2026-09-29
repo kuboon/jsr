@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { markdownToHast } from "./mod.ts";
 import { hastToHtml } from "./hast_to_html.ts";
 import { hastToDom } from "./hast_to_dom.ts";
-import { hastToRemix } from "./hast_to_remix.ts";
+import { hastToElement } from "./hast_to_element.ts";
 import { hastToReact } from "./hast_to_react.ts";
 
 Deno.test("hastToHtml: serializes a hast tree", async () => {
@@ -43,19 +43,19 @@ const fakeCreateElement = (
   ...children: unknown[]
 ): FakeElement => ({ type, props: { ...props, children } });
 
-Deno.test("hastToRemix: builds an element tree with the supplied factory", async () => {
+Deno.test("hastToElement: builds an element tree with the supplied factory", async () => {
   const hast = await markdownToHast(
     "Some **bold** text with [a link](https://example.com).",
   );
-  const remix = hastToRemix(hast, fakeCreateElement) as FakeElement[];
+  const remix = hastToElement(hast, fakeCreateElement) as FakeElement[];
   const paragraph = remix[0];
   assertEquals(paragraph.type, "p");
   assertStringIncludes(JSON.stringify(paragraph), "https://example.com");
 });
 
-Deno.test("hastToRemix: nests children through the factory", async () => {
+Deno.test("hastToElement: nests children through the factory", async () => {
   const hast = await markdownToHast("Some **bold** text.");
-  const [paragraph] = hastToRemix(hast, fakeCreateElement) as FakeElement[];
+  const [paragraph] = hastToElement(hast, fakeCreateElement) as FakeElement[];
   const children = paragraph.props.children as (FakeElement | string)[];
   assertEquals(children[0], "Some ");
   assertEquals((children[1] as FakeElement).type, "strong");

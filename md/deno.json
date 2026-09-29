@@ -6,7 +6,7 @@
     ".": "./mod.ts",
     "./hast_to_dom.ts": "./hast_to_dom.ts",
     "./hast_to_html.ts": "./hast_to_html.ts",
-    "./hast_to_remix.ts": "./hast_to_remix.ts",
+    "./hast_to_element.ts": "./hast_to_element.ts",
     "./hast_to_react.ts": "./hast_to_react.ts"
   },
   "tasks": {

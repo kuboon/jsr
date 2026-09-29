@@ -19,7 +19,7 @@
  * graph.
  *
  * ```ts
- * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts"; // takes your createElement
+ * import { hastToElement } from "@kuboon/md/hast_to_element.ts"; // takes your createElement
  * import { hastToReact } from "@kuboon/md/hast_to_react.ts"; // pulls react
  * ```
  *
@@ -94,7 +94,7 @@ export interface MarkdownToHastOptions {
  *
  * Convert the result yourself (e.g. with {@linkcode hastToHtml}) if you
  * need an HTML string, or with {@linkcode hastToDom}; `hastToReact` and
- * `hastToRemix` are at their own entry points.
+ * `hastToElement` are at their own entry points.
  *
  * @example
  * ```ts
