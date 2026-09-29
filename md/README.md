@@ -89,10 +89,9 @@ const tree = hastToElement(hast, withComponents);
 
 ### React で使う場合
 
-React の `createElement` も形は同じだが、そのまま渡すと Shiki のコードブロック
-で落ちる。hast の `style` は**文字列**（仕様どおり）なのに React は
-オブジェクトを要求し、Shiki の経路は `class` / `tabindex` を生の属性名で
-持っているため。正規化する factory を挟む:
+React の `createElement` も形は同じなので、ほぼそのまま渡せる。違いは `style`
+だけ —— hast の `style` は仕様どおり**文字列**だが、React はオブジェクトを
+要求する。そこだけ変換する factory を挟む:
 
 ```ts ignore
 import { createElement } from "react";
@@ -100,29 +99,31 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { markdownToHast } from "@kuboon/md";
 import { hastToElement } from "@kuboon/md/hast_to_element.ts";
 
-function reactFactory(
+const styleToObject = (style: string) =>
+  Object.fromEntries(
+    style.split(";").filter(Boolean).map((rule) => {
+      const [name, ...rest] = rule.split(":");
+      return [
+        name.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
+        rest.join(":").trim(),
+      ];
+    }),
+  );
+
+const reactFactory = (
   type: string,
   props: Record<string, unknown>,
   ...children: unknown[]
-) {
-  const fixed: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(props)) {
-    if (key === "style" && typeof value === "string") {
-      fixed.style = Object.fromEntries(
-        value.split(";").filter(Boolean).map((rule) => {
-          const [name, ...rest] = rule.split(":");
-          return [
-            name.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
-            rest.join(":").trim(),
-          ];
-        }),
-      );
-    } else if (key === "class") fixed.className = value;
-    else if (key === "tabindex") fixed.tabIndex = value;
-    else fixed[key] = value;
-  }
-  return createElement(type, fixed, ...children);
-}
+) => {
+  const { style, ...rest } = props;
+  return createElement(
+    type,
+    typeof style === "string"
+      ? { ...rest, style: styleToObject(style) }
+      : props,
+    ...children,
+  );
+};
 
 const hast = await markdownToHast("# Hello");
 const html = renderToStaticMarkup(
@@ -130,8 +131,12 @@ const html = renderToStaticMarkup(
 );
 ```
 
-これは `hast_converters.test.ts` でそのままテストしている。HTML
+これは `hast_converters.test.ts` で実物の React を使ってテストしている。HTML
 文字列が欲しいだけなら `hastToHtml` の方が早い。
+
+プロパティ名は気にしなくてよい。Shiki の `codeToHast` は `class` / `tabindex`
+という生の属性名で出してくるが、`rehypeShiki` が hast の規約（`className` /
+`tabIndex`）に直してから本文に埋めている。HTML への出力は変わらない。
 
 ## インストール
 

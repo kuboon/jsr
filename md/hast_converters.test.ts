@@ -64,32 +64,34 @@ Deno.test("hastToElement: nests children through the factory", async () => {
 
 /**
  * React's `createElement` has the same shape, so it can be injected directly —
- * but React wants DOM prop names and a style *object*, while hast carries some
- * raw HTML attribute names (the Shiki path) and a style *string*. This is the
- * normalizing factory the README documents for React consumers.
+ * except that hast's `style` is a *string* (per the spec) and React wants an
+ * object. This is the normalizing factory the README documents.
  */
 function reactFactory(
   type: string,
   props: Record<string, unknown>,
   ...children: unknown[]
 ) {
-  const fixed: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(props)) {
-    if (key === "style" && typeof value === "string") {
-      fixed.style = Object.fromEntries(
-        value.split(";").filter(Boolean).map((rule) => {
-          const [name, ...rest] = rule.split(":");
-          return [
-            name.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
-            rest.join(":").trim(),
-          ];
-        }),
-      );
-    } else if (key === "class") fixed.className = value;
-    else if (key === "tabindex") fixed.tabIndex = value;
-    else fixed[key] = value;
-  }
-  return createElement(type, fixed, ...children);
+  const { style, ...rest } = props;
+  return createElement(
+    type,
+    typeof style === "string"
+      ? { ...rest, style: styleToObject(style) }
+      : props,
+    ...children,
+  );
+}
+
+function styleToObject(style: string): Record<string, string> {
+  return Object.fromEntries(
+    style.split(";").filter(Boolean).map((rule) => {
+      const [name, ...rest] = rule.split(":");
+      return [
+        name.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
+        rest.join(":").trim(),
+      ];
+    }),
+  );
 }
 
 Deno.test("hastToElement: React's createElement works through a normalizing factory", async () => {
@@ -106,4 +108,35 @@ Deno.test("hastToElement: React's createElement works through a normalizing fact
   // the Shiki block is what breaks without the normalization
   assertStringIncludes(html, 'class="shiki github-dark"');
   assertStringIncludes(html, "background-color:#24292e");
+});
+
+Deno.test("markdownToHast: Shiki's nodes carry hast property names", async () => {
+  const hast = await markdownToHast("```ts\nconst x = 1;\n```");
+  const names = new Set<string>();
+  // deno-lint-ignore no-explicit-any
+  const walk = (node: any) => {
+    if (node.type === "element") {
+      for (const key of Object.keys(node.properties ?? {})) {
+        names.add(`${node.tagName}.${key}`);
+      }
+    }
+    for (const child of node.children ?? []) walk(child);
+  };
+  walk(hast);
+
+  // Shiki emits `class` / `tabindex`; `rehypeShiki` normalizes them, so nothing
+  // downstream has to special-case the one subtree that spells them raw.
+  assertEquals([...names].filter((n) => n.endsWith(".class")), []);
+  assertEquals([...names].filter((n) => n.endsWith(".tabindex")), []);
+  assertEquals(names.has("pre.className"), true);
+  assertEquals(names.has("pre.tabIndex"), true);
+  // `style` stays a string — that is what the hast spec says it is.
+  assertEquals(names.has("pre.style"), true);
+});
+
+Deno.test("markdownToHast: normalizing Shiki does not change the HTML", async () => {
+  const html = hastToHtml(await markdownToHast("```ts\nconst x = 1;\n```"));
+  assertStringIncludes(html, '<pre class="shiki github-dark"');
+  assertStringIncludes(html, 'style="background-color:#24292e;color:#e1e4e8"');
+  assertStringIncludes(html, 'tabindex="0"');
 });
