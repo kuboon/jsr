@@ -1,13 +1,12 @@
 {
   "name": "@kuboon/md",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "license": "MIT",
   "exports": {
     ".": "./mod.ts",
     "./hast_to_dom.ts": "./hast_to_dom.ts",
     "./hast_to_html.ts": "./hast_to_html.ts",
-    "./hast_to_remix.ts": "./hast_to_remix.ts",
-    "./hast_to_react.ts": "./hast_to_react.ts"
+    "./hast_to_element.ts": "./hast_to_element.ts"
   },
   "tasks": {
     "test": "deno test --doc --allow-read --allow-env --allow-net"
@@ -30,7 +29,6 @@
     "shiki/bundle/web": "npm:shiki@^4.4.3/bundle/web",
     "hast-util-to-html": "npm:hast-util-to-html@^9.0.5",
     "hast-util-to-dom": "npm:hast-util-to-dom@^4.0.1",
-    "@remix-run/ui": "npm:@remix-run/ui@^0.10.0",
     "hast-util-to-jsx-runtime": "npm:hast-util-to-jsx-runtime@^2.3.6",
     "react": "npm:react@^19.3.0",
     "hast": "npm:@types/hast@^3.0.5",

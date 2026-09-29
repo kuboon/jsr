@@ -2,7 +2,12 @@ import { visit } from "unist-util-visit";
 import { sanitize } from "hast-util-sanitize";
 import { codeToHast } from "shiki/bundle/web";
 import { shikiSchema } from "./sanitize.ts";
-import { findCode, languageOf, textOf } from "./hast_utils.ts";
+import {
+  findCode,
+  languageOf,
+  normalizeProperties,
+  textOf,
+} from "./hast_utils.ts";
 import type { Element, Root } from "hast";
 
 /**
@@ -112,6 +117,10 @@ export function rehypeShiki(
         if (!highlighted) return;
 
         const clean = sanitize(highlighted, shikiSchema) as Root;
+        // Shiki spells its properties `class` and `tabindex`; hast's own names
+        // are `className` and `tabIndex`. Same HTML either way, but the tree is
+        // read directly by `hastToElement` consumers.
+        normalizeProperties(clean);
         const replacement = clean.children[0];
         if (replacement) parent.children[index] = replacement as Element;
       });

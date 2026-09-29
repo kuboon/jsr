@@ -42,20 +42,101 @@
   ノードに変換（[`hast-util-to-dom`](https://github.com/syntax-tree/hast-util-to-dom)
   のラッパー）。ブラウザの `document`、または `options.document` 経由で渡した
   DOM 実装（`linkedom` など）を使う。
-- `hastToRemix(hast)`（`@kuboon/md/hast_to_remix.ts`）—
-  [Remix UI](https://github.com/remix-run/remix/tree/main/packages/ui)
-  の要素ツリー（`RemixNode`）に変換。`createRoot(...).render(...)`
-  にそのまま渡せる。
-- `hastToReact(hast, options?)`（`@kuboon/md/hast_to_react.ts`）— React
-  の要素ツリーに変換（[`hast-util-to-jsx-runtime`](https://github.com/syntax-tree/hast-util-to-jsx-runtime)
-  のラッパー）。`react-dom` などでそのままレンダリングできる。
+- `hastToElement(hast, createElement)`（`@kuboon/md/hast_to_element.ts`）—
+  `createElement` が作る要素ツリーに変換。
+  [Remix UI](https://github.com/remix-run/remix/tree/main/packages/ui) の
+  `createElement` を渡せば `createRoot(...).render(...)`
+  にそのまま渡せる。factory は**呼び出し側が渡す**（後述）。
 - `tocFromHast(hast)` — 見出し（`h1`-`h6`）を文書順に列挙した目次
   （`{ depth, id, text }[]`）を返す。`id` は自動付与された `rehypeHeadingLinks`
   のものをそのまま使う。脚注セクションの見出し（Footnotes）は含めない。
 
-UI フレームワークに縛られる後ろ2つは、`@kuboon/md` 本体ではなく**それぞれの
-エントリポイント**にある。`@kuboon/md` を import しただけで使わない
-`@remix-run/ui` や `react` が依存グラフに入らないようにするため。
+UI の要素を作る `hastToElement` は、`@kuboon/md` 本体ではなく**専用のエントリ
+ポイント**にある。使わない変換器が依存グラフに入らないようにするため。
+
+そして UI ライブラリに**まったく依存しない**。`createElement` を引数で受け取る。
+ライブラリが UI ランタイムを import するとバージョン範囲を固定することになるが、
+たとえば `@remix-run/ui` の範囲は minor をまたいで重ならない —— このパッケージ
+より 1 つ先の minor を使っている利用側では**ランタイムが二重に解決され**、
+モジュールレベルの状態がエラーも無く二つ存在することになる。factory を引数に
+すれば、コピーは利用側の 1 つだけになる。
+
+`createElement(type, props, ...children)` の形をした factory なら何でも使える。
+Remix UI で使う場合は `@remix-run/ui` の `createElement` をそのまま渡す:
+
+```ts ignore
+import { createElement, createRoot } from "@remix-run/ui";
+import { markdownToHast } from "@kuboon/md";
+import { hastToElement } from "@kuboon/md/hast_to_element.ts";
+
+const tree = hastToElement(await markdownToHast("# Hello"), createElement);
+createRoot(container).render(tree);
+```
+
+factory は**タグ名を受け取る**ので、特定のタグを自前のコンポーネントに
+差し替えるのも呼び出し側で書ける。記事中の `<a>` をフレームナビゲーション用の
+コンポーネントで描く、といった場合:
+
+```ts ignore
+const withComponents = (
+  type: string,
+  props: Record<string, unknown>,
+  ...children: unknown[]
+) => createElement(components[type] ?? type, props, ...children);
+
+const tree = hastToElement(hast, withComponents);
+```
+
+### React で使う場合
+
+React の `createElement` も形は同じなので、ほぼそのまま渡せる。違いは `style`
+だけ —— hast の `style` は仕様どおり**文字列**だが、React はオブジェクトを
+要求する。そこだけ変換する factory を挟む:
+
+```ts ignore
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { markdownToHast } from "@kuboon/md";
+import { hastToElement } from "@kuboon/md/hast_to_element.ts";
+
+const styleToObject = (style: string) =>
+  Object.fromEntries(
+    style.split(";").filter(Boolean).map((rule) => {
+      const [name, ...rest] = rule.split(":");
+      return [
+        name.trim().replace(/-([a-z])/g, (_, c) => c.toUpperCase()),
+        rest.join(":").trim(),
+      ];
+    }),
+  );
+
+const reactFactory = (
+  type: string,
+  props: Record<string, unknown>,
+  ...children: unknown[]
+) => {
+  const { style, ...rest } = props;
+  return createElement(
+    type,
+    typeof style === "string"
+      ? { ...rest, style: styleToObject(style) }
+      : props,
+    ...children,
+  );
+};
+
+const hast = await markdownToHast("# Hello");
+const html = renderToStaticMarkup(
+  hastToElement(hast, reactFactory) as ReactNode,
+);
+```
+
+これは `hast_converters.test.ts` で実物の React を使ってテストしている。HTML
+文字列が欲しいだけなら `hastToHtml` の方が早い。
+
+プロパティ名は気にしなくてよい。Shiki の `codeToHast` は `class` / `tabindex`
+という生の属性名で出してくるが、`rehypeShiki` が hast の規約（`className` /
+`tabIndex`）に直してから本文に埋めている。HTML への出力は変わらない。
 
 ## インストール
 
@@ -90,16 +171,15 @@ const html = toHtml(hast);
 `@kuboon/md` が提供する変換関数を使う場合:
 
 ```ts ignore
+import { createElement } from "@remix-run/ui";
 import { hastToDom, hastToHtml, markdownToHast } from "@kuboon/md";
-import { hastToRemix } from "@kuboon/md/hast_to_remix.ts";
-import { hastToReact } from "@kuboon/md/hast_to_react.ts";
+import { hastToElement } from "@kuboon/md/hast_to_element.ts";
 
 const hast = await markdownToHast("# Hello");
 
 const html = hastToHtml(hast);
 const dom = hastToDom(hast); // ブラウザの document を使う
-const remix = hastToRemix(hast); // createRoot(...).render(remix) に渡せる
-const react = hastToReact(hast); // <ReactDOM.render> などにそのまま渡せる
+const remix = hastToElement(hast, createElement); // createRoot(...).render(remix) に渡せる
 ```
 
 ### オプション
@@ -213,10 +293,11 @@ const hast = await markdownToHast(source, {
   文字列に変換する。
 - `hastToDom(hast, options?)` / `./hast_to_dom.ts` — hast を実 DOM
   ノードに変換する。
-- `hastToRemix(hast)` / `./hast_to_remix.ts` — hast を Remix UI の要素ツリーに
-  変換する。**本体からは export されない**（`@remix-run/ui` を引くため）。
-- `hastToReact(hast, options?)` / `./hast_to_react.ts` — hast を React
-  の要素ツリーに変換する。**本体からは export されない**（`react` を引くため）。
+- `hastToElement(hast, createElement)` / `./hast_to_element.ts` — hast を
+  `createElement` が作る要素ツリー（Remix UI など）に変換する。factory は
+  呼び出し側が渡すので、このパッケージはどの UI ライブラリにも依存しない。
+  **本体からは export されない**（エントリポイントを分けて、使わない利用側の
+  グラフに入れないため）。
 - `tocFromHast(hast)` / `./toc.ts` — hast
   から見出しの目次（`{ depth, id, text }[]`）を抽出する。
 

@@ -14,13 +14,12 @@
  *
  * Convert the resulting hast tree to whatever you need next: {@linkcode hastToHtml},
  * {@linkcode hastToDom}, and {@linkcode tocFromHast} (a table of contents from the
- * document's headings) are here, and the two that bind you to a UI framework live at
- * their own entry points, so importing this module never puts one in your dependency
- * graph.
+ * document's headings) are here. {@linkcode hastToElement}, which builds UI elements,
+ * is at its own entry point and depends on no UI library — it takes the element factory
+ * from the caller, so there is exactly one copy of it, the caller's.
  *
  * ```ts
- * import { hastToRemix } from "@kuboon/md/hast_to_remix.ts"; // pulls @remix-run/ui
- * import { hastToReact } from "@kuboon/md/hast_to_react.ts"; // pulls react
+ * import { hastToElement } from "@kuboon/md/hast_to_element.ts"; // takes your createElement
  * ```
  *
  * > [!IMPORTANT]
@@ -93,8 +92,8 @@ export interface MarkdownToHastOptions {
  *   code — is passed through `rehype-sanitize` before being returned.
  *
  * Convert the result yourself (e.g. with {@linkcode hastToHtml}) if you
- * need an HTML string, or with {@linkcode hastToDom}; `hastToReact` and
- * `hastToRemix` are at their own entry points.
+ * need an HTML string, or with {@linkcode hastToDom}; `hastToElement` is at its
+ * own entry point.
  *
  * @example
  * ```ts
