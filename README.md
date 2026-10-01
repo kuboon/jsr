@@ -6,15 +6,16 @@
 
 ## Packages
 
-| Package                                                                     | ディレクトリ                                      | 説明                                                                            |
-| --------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------- |
-| [@kuboon/kv](https://jsr.io/@kuboon/kv)                                     | [`kv/`](./kv)                                     | バックエンド非依存の Key-Value ストア抽象                                       |
-| [@kuboon/md](https://jsr.io/@kuboon/md)                                     | [`md/`](./md)                                     | Mermaid/Shiki 対応の unified ベース Markdown → HTML 変換                        |
-| [@kuboon/file-server-behavior](https://jsr.io/@kuboon/file-server-behavior) | [`file-server-behavior/`](./file-server-behavior) | GitHub Pages / Vercel の静的ファイル配信ルールをエミュレート                    |
-| [@kuboon/onboarding-kit](https://jsr.io/@kuboon/onboarding-kit)             | [`onboarding-kit/`](./onboarding-kit)             | JSON シナリオで動く、フレームワーク非依存のプロダクトツアー用カスタムエレメント |
-| [@kuboon/qrcode-gen](https://jsr.io/@kuboon/qrcode-gen)                     | [`qrcode-gen/`](./qrcode-gen)                     | ゼロ依存の QR コードエンコーダ(モジュール配列を返すのみ)                        |
-| [@kuboon/tailwindcss-deno](https://jsr.io/@kuboon/tailwindcss-deno)         | [`tailwindcss-deno/`](./tailwindcss-deno)         | Tailwind CSS v4 を Deno で動かす `@tailwindcss/node` 相当                       |
-| [@kuboon/share-element](https://jsr.io/@kuboon/share-element)               | [`share-element/`](./share-element)               | X/LINE/Threads 等のシェアボタンを備えたカスタムダイアログエレメント             |
+| Package                                                                     | ディレクトリ                                      | 説明                                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [@kuboon/kv](https://jsr.io/@kuboon/kv)                                     | [`kv/`](./kv)                                     | バックエンド非依存の Key-Value ストア抽象                                         |
+| [@kuboon/md](https://jsr.io/@kuboon/md)                                     | [`md/`](./md)                                     | Mermaid/Shiki 対応の unified ベース Markdown → HTML 変換                          |
+| [@kuboon/file-server-behavior](https://jsr.io/@kuboon/file-server-behavior) | [`file-server-behavior/`](./file-server-behavior) | GitHub Pages / Vercel の静的ファイル配信ルールをエミュレート                      |
+| [@kuboon/onboarding-kit](https://jsr.io/@kuboon/onboarding-kit)             | [`onboarding-kit/`](./onboarding-kit)             | JSON シナリオで動く、フレームワーク非依存のプロダクトツアー用カスタムエレメント   |
+| [@kuboon/qrcode-gen](https://jsr.io/@kuboon/qrcode-gen)                     | [`qrcode-gen/`](./qrcode-gen)                     | ゼロ依存の QR コードエンコーダ(モジュール配列を返すのみ)                          |
+| [@kuboon/tailwindcss-deno](https://jsr.io/@kuboon/tailwindcss-deno)         | [`tailwindcss-deno/`](./tailwindcss-deno)         | Tailwind CSS v4 を Deno で動かす `@tailwindcss/node` 相当                         |
+| [@kuboon/share-element](https://jsr.io/@kuboon/share-element)               | [`share-element/`](./share-element)               | X/LINE/Threads 等のシェアボタンを備えたカスタムダイアログエレメント               |
+| [@kuboon/bgm](https://jsr.io/@kuboon/bgm)                                   | [`bgm/`](./bgm)                                   | Web Audio でゲーム BGM を鳴らす土台(イントロ付きループ・クロスフェード・音量バス) |
 
 ## 開発
 

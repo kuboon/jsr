@@ -1427,6 +1427,11 @@
   },
   "workspace": {
     "members": {
+      "bgm": {
+        "dependencies": [
+          "jsr:@std/assert@^1.0.19"
+        ]
+      },
       "file-server-behavior": {
         "dependencies": [
           "jsr:@std/assert@^1.0.19"
