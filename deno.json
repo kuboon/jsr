@@ -13,6 +13,10 @@
     "exclude": ["npm:@remix-run/*"]
   },
   "tasks": {
-    "test": "deno test --allow-read --allow-env --allow-net --allow-sys --allow-ffi"
+    "test": "deno test --allow-read --allow-env --allow-net --allow-sys --allow-ffi",
+    "build": {
+      "description": "Build the demo page into dist/. Hoisted node_modules keep lazy chunks out of dot directories, which GitHub Pages artifacts drop.",
+      "command": "rm -rf dist && deno install --node-modules-dir=manual --node-modules-linker=hoisted && deno bundle --platform browser --minify --node-modules-dir=manual --node-modules-linker=hoisted --outdir dist demo/index.html"
+    }
   }
 }

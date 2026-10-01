@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@kuboon packages demo</title>
+    <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #fafafa;
+      --fg: #1f2328;
+      --muted: #59636e;
+      --card: #ffffff;
+      --border: #d1d9e0;
+      --accent: #0969da;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --fg: #e6edf3;
+        --muted: #9198a1;
+        --card: #151b23;
+        --border: #3d444d;
+        --accent: #4493f8;
+      }
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.6 system-ui, sans-serif;
+    }
+    header,
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+    header {
+      padding-top: 32px;
+    }
+    header p {
+      color: var(--muted);
+      margin-top: 0;
+    }
+    a {
+      color: var(--accent);
+    }
+    header nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin-bottom: 8px;
+    }
+    main > section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 24px 0;
+    }
+    main > section > h2 {
+      margin-top: 0;
+    }
+    main > section > h2 code {
+      font-size: 0.9em;
+    }
+    .lead {
+      color: var(--muted);
+      margin-top: -8px;
+    }
+    button {
+      font: inherit;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: inherit;
+      cursor: pointer;
+    }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    input[type="text"],
+    input[type="url"],
+    textarea {
+      width: 100%;
+      font: inherit;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: inherit;
+    }
+    textarea {
+      font-family: ui-monospace, monospace;
+      font-size: 14px;
+      min-height: 360px;
+      resize: vertical;
+    }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 720px) {
+      .split {
+        grid-template-columns: 1fr;
+      }
+    }
+    .md-preview {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .md-preview pre {
+      overflow-x: auto;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .md-preview .mermaid-diagram svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .md-preview h1 a,
+    .md-preview h2 a,
+    .md-preview h3 a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .md-preview table {
+      border-collapse: collapse;
+    }
+    .md-preview th,
+    .md-preview td {
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+    }
+    .toc {
+      border-left: 3px solid var(--border);
+      padding-left: 12px;
+      margin-bottom: 16px;
+    }
+    .toc ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .toc li[data-depth="2"] {
+      padding-left: 1em;
+    }
+    .toc li[data-depth="3"] {
+      padding-left: 2em;
+    }
+    .status {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .qr {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .qr svg {
+      width: 200px;
+      height: 200px;
+      background: #fff;
+      border-radius: 8px;
+    }
+    .qr .fields {
+      flex: 1 1 240px;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>@kuboon packages demo</h1>
+      <p>
+        Live demos of packages published from
+        <a href="https://github.com/kuboon/jsr">kuboon/jsr</a>.
+      </p>
+      <nav data-tour="nav">
+        <a href="#md">@kuboon/md</a>
+        <a href="#qrcode-gen">@kuboon/qrcode-gen</a>
+        <a href="#share-element">@kuboon/share-element</a>
+        <a href="#onboarding-kit">@kuboon/onboarding-kit</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="md" data-tour="md">
+        <h2><a href="https://jsr.io/@kuboon/md"><code>@kuboon/md</code></a></h2>
+        <p class="lead">
+          Markdown → sanitized HTML, with Mermaid diagrams, Shiki highlighting,
+          and a table of contents. Edit the source on the left.
+        </p>
+        <div class="split">
+          <div>
+            <label for="md-source">Markdown</label>
+            <textarea id="md-source" spellcheck="false"></textarea>
+            <p class="status" id="md-status"></p>
+          </div>
+          <div class="md-preview">
+            <nav class="toc" aria-label="Table of contents">
+              <strong>Contents</strong>
+              <ol id="md-toc"></ol>
+            </nav>
+            <div id="md-output"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="qrcode-gen" data-tour="qrcode-gen">
+        <h2>
+          <a
+            href="https://jsr.io/@kuboon/qrcode-gen"><code>@kuboon/qrcode-gen</code></a>
+        </h2>
+        <p class="lead">
+          A zero-dependency QR encoder. It only computes the module grid; this
+          page draws it as SVG.
+        </p>
+        <div class="qr">
+          <svg id="qr-svg" role="img" aria-label="QR code"></svg>
+          <div class="fields">
+            <label for="qr-text">Text</label>
+            <input id="qr-text" type="text" value="https://jsr.io/@kuboon">
+            <p class="status" id="qr-status"></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="share-element" data-tour="share-element">
+        <h2>
+          <a
+            href="https://jsr.io/@kuboon/share-element"><code>@kuboon/share-element</code></a>
+        </h2>
+        <p class="lead">
+          <code>&lt;share-buttons&gt;</code>: X, LINE, Threads, and the native
+          share sheet (or a copy button where there is none).
+        </p>
+        <label for="share-url">URL to share</label>
+        <input id="share-url" type="url"
+          value="https://jsr.io/@kuboon/share-element">
+        <div class="row">
+          <share-buttons id="share-buttons" show="all"></share-buttons>
+        </div>
+        <div class="row">
+          <span>Labels:</span>
+          <button type="button" data-share-lang="en">English</button>
+          <button type="button" data-share-lang="ja">日本語</button>
+        </div>
+      </section>
+
+      <section id="onboarding-kit" data-tour="onboarding-kit">
+        <h2>
+          <a
+            href="https://jsr.io/@kuboon/onboarding-kit"><code>@kuboon/onboarding-kit</code></a>
+        </h2>
+        <p class="lead">
+          A product tour from a JSON scenario: a dimmed page, a spotlight, and
+          an anchored tooltip.
+        </p>
+        <button type="button" class="primary" id="tour-start"
+          data-tour="tour-start">
+          Take a tour of this page
+        </button>
+      </section>
+    </main>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
