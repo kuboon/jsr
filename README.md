@@ -23,6 +23,20 @@
 deno task test
 ```
 
+## デモページ
+
+[`demo/`](./demo) に、ブラウザで動くパッケージをまとめて試せる 1 枚の HTML
+ページがある。`deno bundle` で `dist/` にビルドし、`.github/workflows/pages.yml`
+が GitHub Pages に公開する（PR ごとにプレビューも出る）。
+
+```sh
+deno task build
+deno run -R --allow-net jsr:@std/http/file-server dist
+```
+
+`demo/` には `deno.json` を置かないこと。リリースワークフローが JSR
+パッケージとして publish しようとする。
+
 ## 新しいパッケージの追加
 
 1. ルートに新しいディレクトリを作り、`deno.json`（`name` / `version` /
