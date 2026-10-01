@@ -188,6 +188,24 @@
     .qr .fields {
       flex: 1 1 240px;
     }
+    .radios {
+      border: 0;
+      padding: 0;
+      margin: 12px 0 0;
+    }
+    .radios legend {
+      float: left;
+      padding: 0;
+      margin-right: 12px;
+      font-weight: 600;
+    }
+    .radios label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0 12px 0 0;
+      font-weight: normal;
+    }
     .row {
       display: flex;
       flex-wrap: wrap;
@@ -269,11 +287,12 @@
         <div class="row">
           <share-buttons id="share-buttons" show="all"></share-buttons>
         </div>
-        <div class="row">
-          <span>Labels:</span>
-          <button type="button" data-share-lang="en">English</button>
-          <button type="button" data-share-lang="ja">日本語</button>
-        </div>
+        <fieldset class="radios">
+          <legend>Labels</legend>
+          <label><input type="radio" name="share-lang" value="en" checked>
+            English</label>
+          <label><input type="radio" name="share-lang" value="ja"> 日本語</label>
+        </fieldset>
       </section>
 
       <section id="onboarding-kit" data-tour="onboarding-kit">

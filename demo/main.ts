@@ -139,15 +139,21 @@ shareButtons.url = shareUrl.value;
 shareUrl.addEventListener("input", () => {
   shareButtons.url = shareUrl.value;
 });
+// Read the checked radio on load too: a reload can restore the form's state.
+function applyShareLang(): void {
+  const checked = document.querySelector<HTMLInputElement>(
+    "input[name=share-lang]:checked",
+  );
+  shareButtons.lang = checked?.value ?? "en";
+}
 for (
-  const button of document.querySelectorAll<HTMLButtonElement>(
-    "[data-share-lang]",
+  const radio of document.querySelectorAll<HTMLInputElement>(
+    "input[name=share-lang]",
   )
 ) {
-  button.addEventListener("click", () => {
-    shareButtons.lang = button.dataset.shareLang ?? "en";
-  });
+  radio.addEventListener("change", applyShareLang);
 }
+applyShareLang();
 
 // --- @kuboon/onboarding-kit ---
 
