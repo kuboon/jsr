@@ -32,6 +32,11 @@ Deno.test("the region is not part of the question", () => {
   assertEquals(shareButtonsLabels("JA"), shareButtonsLabels("ja"));
 });
 
+Deno.test("the QR button has a name in every shipped language", () => {
+  assertEquals(shareButtonsLabels("en").qr, "QR code");
+  assertEquals(shareButtonsLabels("ja").qr, "QR コード");
+});
+
 Deno.test("a language nobody wrote names for reads English", () => {
   // Better than a row of empty tooltips, and better than guessing at a translation.
   assertEquals(shareButtonsLabels("fr"), shareButtonsLabels("en"));

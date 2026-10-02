@@ -2,17 +2,19 @@
 
 A row of share buttons as a single custom element: `<share-buttons>` — X, LINE
 and Threads, plus a native share-sheet button (where the Web Share API exists)
-or a "copy URL" fallback where it doesn't — never both.
+or a "copy URL" fallback where it doesn't — never both — and a button that shows
+the URL as a QR code filling the screen.
 
-All four are monochrome icons drawn in `currentColor`, and the box around each
-one is drawn from `currentColor` too — so the whole row takes whatever color the
-page gives it, and there is nothing to say twice for dark mode.
+All of them are monochrome icons drawn in `currentColor`, and the box around
+each one is drawn from `currentColor` too — so the whole row takes whatever
+color the page gives it, and there is nothing to say twice for dark mode.
 
 **It is only the buttons.** No panel, no heading, no close button, and nothing
 that shows or hides itself. Whether the row sits inline under an article, inside
 a popover, or in a `<dialog>` the page opens is the page's business — and so is
 opening and closing whatever holds it. Put the tag where you want the buttons to
-be and style the thing around it yourself.
+be and style the thing around it yourself. (The one exception is the QR code: it
+is shown over the whole page while the reader holds it up, and closes on a tap.)
 
 ## Usage
 
@@ -45,7 +47,7 @@ row shares `location.href`.
 
 ## Buttons
 
-Four buttons, always in this order:
+Five buttons, always in this order:
 
 1. **X** — opens X's tweet composer, pre-filled with the URL.
 2. **LINE** — opens LINE's share intent.
@@ -53,6 +55,10 @@ Four buttons, always in this order:
 4. **Share** (where `navigator.share` exists) — opens the platform's native
    share sheet with `{ url }`. **Copy URL** (otherwise) — copies the URL to the
    clipboard, and briefly shows a tick to confirm it worked.
+5. **QR code** — shows the URL as a QR code, as big a square as the screen
+   holds, on white edge to edge, for someone else to scan. Tap anywhere (or
+   press Escape) to close it. The code is drawn with
+   [`@kuboon/qrcode-gen`](https://jsr.io/@kuboon/qrcode-gen).
 
 The fourth is one or the other, never both: copying out of a share sheet is a
 row of the sheet, and the share button falls back to the clipboard by itself
@@ -86,12 +92,15 @@ the same sheet is the weak option — a short list, or nothing — and a direct 
 to X or Threads is the better one. So by default the row leans one way or the
 other rather than showing the same four buttons to both:
 
-|                                 | what the reader sees    |
-| ------------------------------- | ----------------------- |
-| Touch device with a share sheet | **Share** alone         |
-| Touch device without one        | X, LINE, Threads, Copy  |
-| Desktop with a share sheet      | X, LINE, Threads, Share |
-| Desktop without one             | X, LINE, Threads, Copy  |
+|                                 | what the reader sees        |
+| ------------------------------- | --------------------------- |
+| Touch device with a share sheet | **Share** and QR            |
+| Touch device without one        | X, LINE, Threads, Copy, QR  |
+| Desktop with a share sheet      | X, LINE, Threads, Share, QR |
+| Desktop without one             | X, LINE, Threads, Copy, QR  |
+
+QR stays on a touch device because it is the one thing the share sheet has no
+row for: holding the screen up to the person next to you.
 
 **The test is the pointer, not the browser.** `navigator.share` exists on
 desktop Chrome and Safari too — exactly where it is the weak path — so its
@@ -119,12 +128,14 @@ Rendered in **light DOM** (no shadow root) specifically so a page's own
 stylesheet can restyle it, under plain, low-specificity (`:where(...)`) default
 styles:
 
-| Class                                                                   | Element                 |
-| ----------------------------------------------------------------------- | ----------------------- |
-| `.share-buttons`                                                        | the row itself          |
-| `.share-buttons__button`                                                | every share/copy button |
-| `.share-buttons__button--x`, `--line`, `--threads`, `--share`, `--copy` | one specific button     |
-| `.share-buttons__icon`                                                  | the `<svg>` inside one  |
+| Class                                                                           | Element                       |
+| ------------------------------------------------------------------------------- | ----------------------------- |
+| `.share-buttons`                                                                | the row itself                |
+| `.share-buttons__button`                                                        | every share/copy button       |
+| `.share-buttons__button--x`, `--line`, `--threads`, `--share`, `--copy`, `--qr` | one specific button           |
+| `.share-buttons__icon`                                                          | the `<svg>` inside one        |
+| `.share-buttons__qr`                                                            | the full-screen QR `<dialog>` |
+| `.share-buttons__qr-code`                                                       | the QR code's `<svg>`         |
 
 The row also carries `data-share-sheet` when `navigator.share` exists, which is
 what the collapse rule above keys off.
