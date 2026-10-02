@@ -2,8 +2,9 @@
  * `<share-buttons>`: a row of share buttons for one URL.
  *
  * X, LINE and Threads, plus either a native share-sheet button (where `navigator.share` exists) or
- * a "copy URL" fallback — never both, since copying out of a share sheet is a row of the sheet.
- * All four are monochrome icons drawn in `currentColor`, inside a box drawn from `currentColor`
+ * a "copy URL" fallback — never both, since copying out of a share sheet is a row of the sheet —
+ * and a button that shows the URL as a QR code filling the screen, for someone else's camera.
+ * All of them are monochrome icons drawn in `currentColor`, inside a box drawn from `currentColor`
  * as well, so the row takes the color the page gives it and needs nothing said twice for dark
  * mode. What a button is called lives on as its
  * `aria-label` and its tooltip rather than as text on it, in the language the page declares —
@@ -12,7 +13,8 @@
  * **It is only the buttons.** No panel, no heading, no close button, and nothing that shows or
  * hides itself: whether the row sits inline under an article, inside a popover, or in a `<dialog>`
  * the page opens is the page's business, and so is opening and closing whatever holds it. Put the
- * tag where you want the buttons to be and style the thing around it yourself.
+ * tag where you want the buttons to be and style the thing around it yourself. (The one exception
+ * is the QR code, shown over the whole page while the reader holds it up, closed by a tap.)
  *
  * The URL is the `url` attribute, and the page's own address when there is none — read at the
  * moment of the click, so a row placed once is still right after a client-side navigation.
@@ -49,6 +51,7 @@
  */
 
 import { lineShareUrl, threadsShareUrl, xShareUrl } from "./share_urls.ts";
+import { qrPath } from "./qr.ts";
 
 export { lineShareUrl, threadsShareUrl, xShareUrl } from "./share_urls.ts";
 
@@ -70,6 +73,10 @@ export type ShareButtonsLabels = {
   copied?: string;
   /** Shown when the URL could not be handed over at all — neither shared nor copied. */
   copyFailed?: string;
+  /** The button that shows the URL as a full-screen QR code, and that QR code's own name. */
+  qr?: string;
+  /** Shown when the URL is too long to fit in any QR code. */
+  qrFailed?: string;
 };
 
 /**
@@ -99,6 +106,8 @@ export const SHARE_BUTTONS_LABELS: Record<
     copy: "Copy URL",
     copied: "Copied!",
     copyFailed: "Couldn't copy",
+    qr: "QR code",
+    qrFailed: "Too long for a QR code",
   },
   ja: {
     x: "X",
@@ -108,6 +117,8 @@ export const SHARE_BUTTONS_LABELS: Record<
     copy: "URL をコピー",
     copied: "コピーしました",
     copyFailed: "コピーできませんでした",
+    qr: "QR コード",
+    qrFailed: "QR コードにするには長すぎます",
   },
 };
 
@@ -183,6 +194,12 @@ type Icon = {
  * them all. Each brand belongs to its owner — the marks are here to label the button that opens
  * that service, which is the use the brands themselves ask for.
  */
+const WARNING_PATHS = [
+  "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z",
+  "M12 9v4",
+  "M12 17h.01",
+] as const;
+
 const ICONS = {
   x: {
     paths: [
@@ -218,14 +235,21 @@ const ICONS = {
     stroke: true,
     paths: ["M20 6 9 17l-5-5"],
   },
-  copyFailed: {
+  copyFailed: { stroke: true, paths: WARNING_PATHS },
+  qr: {
     stroke: true,
+    // Three finder squares and a scatter of modules: reads as "QR code" at icon size.
     paths: [
-      "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z",
-      "M12 9v4",
-      "M12 17h.01",
+      "M3 3h7v7H3z",
+      "M14 3h7v7h-7z",
+      "M3 14h7v7H3z",
+      "M14 14h3v3h-3z",
+      "M20 14v.01",
+      "M14 20v.01",
+      "M18 18h3v3h-3z",
     ],
   },
+  qrFailed: { stroke: true, paths: WARNING_PATHS },
 } as const satisfies Record<keyof ShareButtonsLabels, Icon>;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -324,7 +348,7 @@ const DEFAULT_STYLE = `
  * A phone's native sheet already lists every app the reader has, so three brand buttons beside it
  * are three worse copies of one of its rows. On a desktop the same sheet is the weak option — a
  * short list, or nothing — and a direct link to X or Threads is the better one. So the row leans
- * one way or the other rather than showing the same four buttons to both.
+ * one way or the other rather than showing the same buttons to both.
  *
  * The test is the pointer, not the browser: \`navigator.share\` exists on desktop Chrome and Safari
  * too, which is exactly where it is the weak path, so its presence alone decides nothing. A laptop
@@ -339,9 +363,36 @@ const DEFAULT_STYLE = `
  */
 @media (pointer: coarse) {
   .share-buttons[data-share-sheet]:not([show="all"])
-    > .share-buttons__button:not(.share-buttons__button--share) {
+    > .share-buttons__button:not(.share-buttons__button--share):not(.share-buttons__button--qr) {
     display: none;
   }
+}
+
+/*
+ * The QR code: as big a square as the viewport holds, on white edge to edge — a scanner needs the
+ * contrast, whatever color the page is. The code carries its own quiet zone, so nothing else has
+ * to keep the margin. 100vh first, for a browser without dvh.
+ */
+:where(.share-buttons__qr) {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  cursor: pointer;
+}
+:where(.share-buttons__qr[open]) { display: grid; place-items: center; }
+:where(.share-buttons__qr)::backdrop { background: #fff; }
+:where(.share-buttons__qr-code) {
+  display: block;
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
+  width: min(100vw, 100dvh);
+  height: min(100vw, 100dvh);
 }
 `;
 
@@ -490,7 +541,7 @@ function buildElementClass(): new () => ShareButtonsElement {
     }
 
     /**
-     * Lays out the four buttons.
+     * Lays out the five buttons.
      *
      * The fourth is the share sheet where the platform has one and the clipboard where it does
      * not — never both. Copying out of a share sheet is a row of the sheet, so a copy button
@@ -498,7 +549,9 @@ function buildElementClass(): new () => ShareButtonsElement {
      * falls back to the clipboard by itself when the sheet is refused, which is the only case the
      * separate button would have covered.
      *
-     * Which of the four a reader sees is then a CSS question — see {@link DEFAULT_STYLE} — so
+     * The fifth shows the URL as a QR code.
+     *
+     * Which of them a reader sees is then a CSS question — see {@link DEFAULT_STYLE} — so
      * nothing here has to guess at a device, and a device that changes its mind (a tablet gaining
      * a keyboard) needs no re-render.
      */
@@ -515,6 +568,7 @@ function buildElementClass(): new () => ShareButtonsElement {
         this.#linkButton("line", names.line, lineShareUrl),
         this.#linkButton("threads", names.threads, threadsShareUrl),
         this.#shareOrCopyButton(names),
+        this.#qrButton(names.qr),
       );
     }
 
@@ -566,6 +620,60 @@ function buildElementClass(): new () => ShareButtonsElement {
         );
       }
       return button;
+    }
+
+    /**
+     * The button that shows the URL as a QR code, for the reader to hold up to someone else's
+     * camera — the one thing a share sheet has no row for, which is why it stays on a touch device
+     * when the others fold into the sheet.
+     */
+    #qrButton(label: string): HTMLButtonElement {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "share-buttons__button share-buttons__button--qr";
+      setButtonIcon(button, ICONS.qr, label);
+      button.addEventListener("click", () => this.#showQr(button, label));
+      return button;
+    }
+
+    /**
+     * Shows the URL's QR code over the whole page, until the reader taps it or presses Escape.
+     *
+     * A modal `<dialog>` rather than a positioned `<div>`: the top layer is above whatever
+     * `z-index` and `overflow` the page has wrapped the row in, the page behind turns inert, and
+     * Escape and putting focus back on the button come with it. It is built at the moment of the
+     * click — the URL is read late, like every other button's — and removed once closed.
+     */
+    #showQr(button: HTMLButtonElement, label: string): void {
+      const url = this.#shareUrl();
+      let path: { extent: number; d: string };
+      try {
+        path = qrPath(url);
+      } catch {
+        this.#flash(button, "qrFailed", ICONS.qr, label);
+        return;
+      }
+
+      const svg = document.createElementNS(SVG_NS, "svg");
+      svg.setAttribute("class", "share-buttons__qr-code");
+      svg.setAttribute("viewBox", `0 0 ${path.extent} ${path.extent}`);
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", url);
+      // Crisp module edges: anti-aliased seams between neighbouring squares can confuse a scanner.
+      svg.setAttribute("shape-rendering", "crispEdges");
+      const modules = document.createElementNS(SVG_NS, "path");
+      modules.setAttribute("d", path.d);
+      modules.setAttribute("fill", "#000");
+      svg.append(modules);
+
+      const dialog = document.createElement("dialog");
+      dialog.className = "share-buttons__qr";
+      dialog.setAttribute("aria-label", label);
+      dialog.append(svg);
+      dialog.addEventListener("click", () => dialog.close());
+      dialog.addEventListener("close", () => dialog.remove());
+      this.append(dialog);
+      dialog.showModal();
     }
 
     /**
@@ -627,7 +735,7 @@ function buildElementClass(): new () => ShareButtonsElement {
      */
     #flash(
       button: HTMLButtonElement,
-      outcome: "copied" | "copyFailed",
+      outcome: "copied" | "copyFailed" | "qrFailed",
       icon: Icon,
       label: string,
     ): void {
