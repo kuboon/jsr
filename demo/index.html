@@ -206,6 +206,51 @@
       margin: 0 12px 0 0;
       font-weight: normal;
     }
+    button[aria-pressed="true"] {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .bgm-bar {
+      position: relative;
+      height: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      background: color-mix(in srgb, var(--accent) 15%, transparent);
+    }
+    .bgm-intro {
+      height: 100%;
+      width: 0;
+      background: var(--border);
+    }
+    .bgm-cursor {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--accent);
+    }
+    .bgm-volumes {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 12px;
+      align-items: center;
+      max-width: 360px;
+      margin-top: 16px;
+    }
+    .bgm-mml-label {
+      margin-top: 16px;
+    }
+    textarea.bgm-mml {
+      min-height: 200px;
+    }
+    #bgm-error {
+      color: #d1242f;
+    }
+    .bgm-volumes label {
+      margin: 0;
+    }
     .row {
       display: flex;
       flex-wrap: wrap;
@@ -226,6 +271,7 @@
         <a href="#md">@kuboon/md</a>
         <a href="#qrcode-gen">@kuboon/qrcode-gen</a>
         <a href="#share-element">@kuboon/share-element</a>
+        <a href="#bgm">@kuboon/bgm</a>
         <a href="#onboarding-kit">@kuboon/onboarding-kit</a>
       </nav>
     </header>
@@ -293,6 +339,50 @@
             English</label>
           <label><input type="radio" name="share-lang" value="ja"> 日本語</label>
         </fieldset>
+      </section>
+
+      <section id="bgm" data-tour="bgm">
+        <h2>
+          <a href="https://jsr.io/@kuboon/bgm"><code>@kuboon/bgm</code></a>
+        </h2>
+        <p class="lead">
+          Game BGM on the Web Audio API, rendered from MML: an intro that plays
+          once, a seamless loop from <code>L</code>, crossfades, and master /
+          BGM / SE volumes. The instruments (music box, overdriven guitar,
+          chiptune waves, drums) come from <code>@kuboon/bgm/instruments</code>.
+        </p>
+        <div class="row">
+          <button type="button" id="bgm-field">Field</button>
+          <button type="button" id="bgm-battle">Battle</button>
+          <button type="button" id="bgm-stop">Stop</button>
+          <button type="button" id="bgm-pause" aria-pressed="false">
+            Pause
+          </button>
+          <button type="button" id="bgm-coin">SE: coin</button>
+        </div>
+        <p class="status" id="bgm-status" aria-live="polite">Stopped</p>
+        <div class="bgm-bar" aria-hidden="true">
+          <div class="bgm-intro" id="bgm-intro"></div>
+          <div class="bgm-cursor" id="bgm-cursor" hidden></div>
+        </div>
+        <div class="bgm-volumes">
+          <label for="bgm-volume-master">Master</label>
+          <input id="bgm-volume-master" type="range" min="0" max="1"
+            step="0.01" value="0.8">
+          <label for="bgm-volume-bgm">BGM</label>
+          <input id="bgm-volume-bgm" type="range" min="0" max="1" step="0.01"
+            value="1">
+          <label for="bgm-volume-se">SE</label>
+          <input id="bgm-volume-se" type="range" min="0" max="1" step="0.01"
+            value="1">
+        </div>
+        <label for="bgm-mml" class="bgm-mml-label">MML</label>
+        <textarea id="bgm-mml" class="bgm-mml" spellcheck="false"></textarea>
+        <p class="status" id="bgm-instruments"></p>
+        <div class="row">
+          <button type="button" id="bgm-play-edited">Play this MML</button>
+          <span class="status" id="bgm-error" role="alert"></span>
+        </div>
       </section>
 
       <section id="onboarding-kit" data-tour="onboarding-kit">

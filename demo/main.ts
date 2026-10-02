@@ -7,6 +7,7 @@ import type { ShareButtonsElement } from "@kuboon/share-element";
 import "@kuboon/share-element";
 import { createOnboardingTour } from "@kuboon/onboarding-kit/element";
 import type { TourScenario } from "@kuboon/onboarding-kit";
+import { setupBgmDemo } from "./bgm.ts";
 
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -155,16 +156,20 @@ for (
 }
 applyShareLang();
 
+// --- @kuboon/bgm ---
+
+setupBgmDemo();
+
 // --- @kuboon/onboarding-kit ---
 
 const scenario: TourScenario = {
   name: "kuboon-jsr-demo",
-  version: 1,
+  version: 2,
   steps: [
     {
       id: "welcome",
       title: "Welcome",
-      body: "This page demos four packages. This tour is the fourth one.",
+      body: "This page demos five packages. This tour is one of them.",
     },
     {
       id: "nav",
@@ -192,6 +197,14 @@ const scenario: TourScenario = {
       target: "[data-tour=share-element]",
       title: "@kuboon/share-element",
       body: "One tag for a row of share buttons.",
+      placement: "top",
+    },
+    {
+      id: "bgm",
+      target: "[data-tour=bgm]",
+      title: "@kuboon/bgm",
+      body:
+        "Play a tune: its intro plays once, then the loop repeats seamlessly. Switch tunes to hear the crossfade.",
       placement: "top",
     },
     {

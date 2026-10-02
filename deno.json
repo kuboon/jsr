@@ -6,7 +6,8 @@
     "./onboarding-kit",
     "./qrcode-gen",
     "./tailwindcss-deno",
-    "./share-element"
+    "./share-element",
+    "./bgm"
   ],
   "minimumDependencyAge": {
     "age": "P1D",
