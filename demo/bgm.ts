@@ -1,131 +1,65 @@
 /// <reference lib="dom" />
 
-import { createTrack, GameAudio, type Track } from "@kuboon/bgm";
-
-/** One section of a tune, one eighth note per entry; `0` is a rest. */
-interface Section {
-  melody: number[];
-  bass: number[];
-}
+import { GameAudio, type Instrument, type Track } from "@kuboon/bgm";
+import {
+  electricGuitar,
+  hihat,
+  kick,
+  musicBox,
+  pulse,
+  snare,
+  triangle,
+} from "@kuboon/bgm/instruments";
 
 interface Tune {
   name: string;
-  bpm: number;
-  intro: Section;
-  loop: Section;
+  /** `@n` in the MML plays `instruments[n]`. */
+  instruments: { name: string; instrument: Instrument }[];
+  mml: string;
 }
 
 const FIELD: Tune = {
   name: "Field",
-  bpm: 132,
-  intro: {
-    melody: [72, 67, 64, 67, 72, 76, 79, 0],
-    bass: [48, 0, 55, 0, 48, 0, 55, 0],
-  },
-  loop: {
-    melody: [
-      ...[76, 0, 74, 72, 74, 0, 67, 0],
-      ...[72, 74, 76, 77, 79, 0, 0, 0],
-      ...[77, 0, 76, 74, 72, 0, 69, 0],
-      ...[71, 72, 74, 71, 72, 0, 0, 0],
-    ],
-    bass: [
-      ...[48, 55, 52, 55, 48, 55, 52, 55],
-      ...[53, 57, 60, 57, 55, 59, 62, 59],
-      ...[53, 57, 60, 57, 57, 60, 64, 60],
-      ...[55, 59, 62, 59, 48, 52, 55, 52],
-    ],
-  },
+  instruments: [
+    { name: "musicBox", instrument: musicBox },
+    { name: "triangle", instrument: triangle },
+    { name: "kick", instrument: kick },
+    { name: "hihat", instrument: hihat },
+  ],
+  mml: `t120
+@0 v13 o5 l8 c<geg>ceg r L
+  e4dcd4<g4> cdefg4g4 a4gfe4d4 edc<b>c2
+  e4dcd4<g4> cdefg4>c4< agfagfed c4<g4>c2;
+@1 v13 q6 o3 l4 c g c g L l8
+  [cg>c<g]4 [fa>c<a]2 o2[gb>d<b]2
+  o3[cg>c<g]4 [fa>c<a]2 o2gb>d<b o3cg>c<g;
+@2 v14 r1 L [c4 r4 c4 r4]8;
+@3 l8 r1 L [v8c v4c]32`,
 };
 
 const BATTLE: Tune = {
   name: "Battle",
-  bpm: 168,
-  intro: {
-    melody: [69, 0, 69, 0, 69, 0, 72, 71, 69, 0, 0, 0, 64, 0, 0, 0],
-    bass: [45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 40, 40, 40, 40],
-  },
-  loop: {
-    melody: [
-      ...[69, 72, 76, 72, 69, 72, 76, 79],
-      ...[77, 76, 74, 72, 74, 0, 71, 0],
-      ...[69, 72, 76, 72, 69, 72, 76, 81],
-      ...[79, 77, 76, 74, 76, 0, 0, 0],
-    ],
-    bass: [
-      ...[45, 57, 45, 57, 45, 57, 45, 57],
-      ...[41, 53, 41, 53, 43, 55, 43, 55],
-      ...[45, 57, 45, 57, 45, 57, 45, 57],
-      ...[40, 52, 40, 52, 40, 52, 40, 52],
-    ],
-  },
+  instruments: [
+    { name: "electricGuitar", instrument: electricGuitar },
+    { name: "pulse(0.25)", instrument: pulse(0.25) },
+    { name: "kick", instrument: kick },
+    { name: "snare", instrument: snare },
+    { name: "hihat", instrument: hihat },
+  ],
+  mml: `t160
+@1 v10 q6 o4 l8 r1 r1 L
+  a>cec<a>ceg< >fedcdr<br a>cec<a>cea< >gfede4.r<
+  o5c4<b4a4g4 o4fga>cd4c4 o5e4d4c<b>c<a o4g+4e4a2;
+@0 v12 q4 l8 o2 a1 r2 g4 e4 L
+  [a]8 [f]4[g]4 [a]8 o3[c]8 o2[f]8 [d]8 [a]8 [e]4[a]4;
+@0 v10 q4 l8 o3 e1 r2 d4 <b4> L
+  [e]8 [c]4[d]4 [e]8 [g]8 [c]8 [a]8 [e]8 <[b]4>[e]4;
+@2 v14 c1 r1 L [c4 r4 c8c8 r4]8;
+@3 v12 r1 r2 l8 cccc L [r4 c4 r4 c4]8;
+@4 l8 r1 r1 L [v9c v5c]32`,
 };
 
-type Wave = (phase: number) => number;
-const pulse: Wave = (phase) => (phase % 1 < 0.25 ? 1 : -1);
-const triangle: Wave = (phase) => 4 * Math.abs((phase % 1) - 0.5) - 1;
-
-function hz(midi: number): number {
-  return 440 * 2 ** ((midi - 69) / 12);
-}
-
-/** Mixes one voice into `out`, each note decaying to silence by the end of its step. */
-function renderVoice(
-  out: Float32Array,
-  rate: number,
-  offset: number,
-  stepLength: number,
-  notes: number[],
-  wave: Wave,
-  gain: number,
-): void {
-  const attack = rate * 0.005;
-  notes.forEach((midi, step) => {
-    if (midi === 0) return;
-    const start = offset + step * stepLength;
-    const frequency = hz(midi);
-    for (let i = 0; i < stepLength; i++) {
-      const envelope = Math.min(1, i / attack) * (1 - i / stepLength) ** 1.5;
-      out[start + i] += gain * envelope * wave(frequency * i / rate);
-    }
-  });
-}
-
-/** Renders intro + loop into one buffer; the loop starts exactly where the intro ends. */
-function renderTune(audio: GameAudio, tune: Tune): Track {
-  const rate = audio.context.sampleRate;
-  const stepLength = Math.round(rate * 60 / tune.bpm / 2);
-  const introLength = tune.intro.melody.length * stepLength;
-  const length = introLength + tune.loop.melody.length * stepLength;
-  const buffer = audio.context.createBuffer(1, length, rate);
-  const data = buffer.getChannelData(0);
-  for (
-    const [section, offset] of [[tune.intro, 0], [
-      tune.loop,
-      introLength,
-    ]] as const
-  ) {
-    renderVoice(data, rate, offset, stepLength, section.melody, pulse, 0.12);
-    renderVoice(data, rate, offset, stepLength, section.bass, triangle, 0.3);
-  }
-  return createTrack(buffer, { loopStart: introLength / rate });
-}
-
-function renderCoin(audio: GameAudio): Track {
-  const rate = audio.context.sampleRate;
-  const stepLength = Math.round(rate * 0.08);
-  const buffer = audio.context.createBuffer(1, stepLength * 3, rate);
-  renderVoice(
-    buffer.getChannelData(0),
-    rate,
-    0,
-    stepLength,
-    [83, 88, 0],
-    pulse,
-    0.3,
-  );
-  return createTrack(buffer);
-}
+const COIN = "t240 v13 l16 o5 b>e4";
 
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -133,22 +67,53 @@ function byId<T extends HTMLElement>(id: string): T {
 
 export function setupBgmDemo(): void {
   const audio = new GameAudio();
-  const tunes = new Map<Track, Tune>();
-  const tracks: Record<string, Track> = {};
-  for (const tune of [FIELD, BATTLE]) {
-    const track = renderTune(audio, tune);
-    tunes.set(track, tune);
-    tracks[tune.name] = track;
-  }
-  const coin = renderCoin(audio);
+  const names = new Map<Track, string>();
+  const coin = audio.compose(COIN, [pulse(0.25)]);
 
-  for (
-    const button of document.querySelectorAll<HTMLButtonElement>("[data-bgm]")
-  ) {
-    button.addEventListener("click", () => {
-      audio.playBgm(tracks[button.dataset.bgm!], { fade: 1 });
+  const editor = byId<HTMLTextAreaElement>("bgm-mml");
+  const legend = byId("bgm-instruments");
+  const error = byId("bgm-error");
+  let selected = FIELD;
+  const cache = new Map<Tune, Track>();
+
+  const compose = (tune: Tune, mml: string): Track | null => {
+    try {
+      const track = audio.compose(
+        mml,
+        tune.instruments.map((i) => i.instrument),
+      );
+      names.set(track, tune.name);
+      error.textContent = "";
+      return track;
+    } catch (e) {
+      error.textContent = (e as Error).message;
+      return null;
+    }
+  };
+
+  const select = (tune: Tune) => {
+    selected = tune;
+    editor.value = tune.mml;
+    legend.textContent = tune.instruments.map((i, n) => `@${n} ${i.name}`)
+      .join("  ");
+  };
+  select(FIELD);
+
+  for (const tune of [FIELD, BATTLE]) {
+    byId(`bgm-${tune.name.toLowerCase()}`).addEventListener("click", () => {
+      select(tune);
+      let track = cache.get(tune);
+      if (track === undefined) {
+        track = compose(tune, tune.mml)!;
+        cache.set(tune, track);
+      }
+      audio.playBgm(track, { fade: 1 });
     });
   }
+  byId("bgm-play-edited").addEventListener("click", () => {
+    const track = compose(selected, editor.value);
+    if (track !== null) audio.playBgm(track, { fade: 0.3 });
+  });
   byId("bgm-stop").addEventListener("click", () => audio.stopBgm({ fade: 1 }));
   byId("bgm-coin").addEventListener("click", () => audio.playSe(coin));
 
@@ -178,7 +143,7 @@ export function setupBgmDemo(): void {
       cursor.hidden = true;
     } else {
       const section = position < track.loopStart ? "intro" : "loop";
-      status.textContent = `${tunes.get(track)!.name}: ${
+      status.textContent = `${names.get(track)}: ${
         position.toFixed(2)
       }s (${section})`;
       intro.style.width = `${track.loopStart / track.loopEnd * 100}%`;

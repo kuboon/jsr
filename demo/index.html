@@ -239,6 +239,15 @@
       max-width: 360px;
       margin-top: 16px;
     }
+    .bgm-mml-label {
+      margin-top: 16px;
+    }
+    textarea.bgm-mml {
+      min-height: 200px;
+    }
+    #bgm-error {
+      color: #d1242f;
+    }
     .bgm-volumes label {
       margin: 0;
     }
@@ -337,13 +346,14 @@
           <a href="https://jsr.io/@kuboon/bgm"><code>@kuboon/bgm</code></a>
         </h2>
         <p class="lead">
-          Game BGM on the Web Audio API: an intro that plays once, a seamless
-          loop, crossfades, and master / BGM / SE volumes. Both tunes are
-          synthesized in the page.
+          Game BGM on the Web Audio API, rendered from MML: an intro that plays
+          once, a seamless loop from <code>L</code>, crossfades, and master /
+          BGM / SE volumes. The instruments (music box, overdriven guitar,
+          chiptune waves, drums) come from <code>@kuboon/bgm/instruments</code>.
         </p>
         <div class="row">
-          <button type="button" data-bgm="Field">Field</button>
-          <button type="button" data-bgm="Battle">Battle</button>
+          <button type="button" id="bgm-field">Field</button>
+          <button type="button" id="bgm-battle">Battle</button>
           <button type="button" id="bgm-stop">Stop</button>
           <button type="button" id="bgm-pause" aria-pressed="false">
             Pause
@@ -365,6 +375,13 @@
           <label for="bgm-volume-se">SE</label>
           <input id="bgm-volume-se" type="range" min="0" max="1" step="0.01"
             value="1">
+        </div>
+        <label for="bgm-mml" class="bgm-mml-label">MML</label>
+        <textarea id="bgm-mml" class="bgm-mml" spellcheck="false"></textarea>
+        <p class="status" id="bgm-instruments"></p>
+        <div class="row">
+          <button type="button" id="bgm-play-edited">Play this MML</button>
+          <span class="status" id="bgm-error" role="alert"></span>
         </div>
       </section>
 

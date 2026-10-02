@@ -1,5 +1,5 @@
-import { assertEquals, assertThrows } from "@std/assert";
-import { createTrack, GameAudio } from "./mod.ts";
+import { assertAlmostEquals, assertEquals, assertThrows } from "@std/assert";
+import { createTrack, GameAudio, type Instrument } from "./mod.ts";
 
 type Curve = { start: number; end: number };
 
@@ -73,8 +73,16 @@ class FakeContext {
     this.sources.push(source);
     return source;
   }
-  decodeAudioData(_data: ArrayBuffer) {
-    return Promise.resolve(fakeBuffer(8));
+  sampleRate = 1000;
+  createBuffer(_channels: number, length: number, sampleRate: number) {
+    const data = new Float32Array(length);
+    return {
+      duration: length / sampleRate,
+      data,
+      copyToChannel(source: Float32Array) {
+        data.set(source);
+      },
+    };
   }
   suspend() {
     this.state = "suspended";
@@ -228,10 +236,15 @@ Deno.test("playSe: plays once through the se bus, ignoring loop points", () => {
   assertEquals(audio.bgm, null);
 });
 
-Deno.test("load: decodes an ArrayBuffer into a track with loop points", async () => {
+Deno.test("compose: renders MML into a track that loops from L", () => {
   const { audio } = setup();
-  const track = await audio.load(new ArrayBuffer(0), { loopStart: 1 });
-  assertEquals([track.loopStart, track.loopEnd], [1, 8]);
+  const tone: Instrument = ({ duration, sampleRate }) =>
+    new Float32Array(Math.round(duration * sampleRate)).fill(1);
+  const track = audio.compose("t60 q8 c4 L d4", [tone]);
+  assertEquals([track.loopStart, track.loopEnd], [1, 2]);
+  const { data } = track.buffer as unknown as { data: Float32Array };
+  assertAlmostEquals(data[0], 0.3);
+  assertAlmostEquals(data[1999], 0.3);
 });
 
 Deno.test("pause/resume: suspend and resume the context", async () => {

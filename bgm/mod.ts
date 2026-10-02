@@ -11,25 +11,44 @@
  *   (browsers keep it suspended until then), and paused while the tab is
  *   hidden.
  *
- * Tracks are decoded into memory (`AudioBuffer`), which is what makes the loop
- * seamless; budget for it — three minutes of 48 kHz stereo is about 70 MB.
+ * Tracks are synthesized: you write the melody in MML and bring the
+ * instruments (or take some from `@kuboon/bgm/instruments`), and
+ * {@linkcode GameAudio.compose} renders them into a track. A track lives in
+ * memory as an `AudioBuffer`, which is what makes the loop seamless.
  *
  * @example
  * ```ts ignore
  * import { GameAudio } from "@kuboon/bgm";
+ * import { kick, musicBox, triangle } from "@kuboon/bgm/instruments";
  *
  * const audio = new GameAudio();
- * const field = await audio.load("field.ogg", { loopStart: 4.8, loopEnd: 52.8 });
- * const battle = await audio.load("battle.ogg", { loopStart: 2.4 });
+ * const instruments = [musicBox, triangle, kick];
+ * const field = audio.compose(
+ *   "t120 @0 o5 l8 c<g>ceg4.r L e4dcd4<g4> ; @1 o3 c2g2 L c1 ; r1 L @2 [c4]4",
+ *   instruments,
+ * );
  *
  * audio.playBgm(field);
  * // later: crossfade over one second
- * audio.playBgm(battle, { fade: 1 });
+ * audio.playBgm(otherTrack, { fade: 1 });
  * audio.setVolume("bgm", 0.5);
  * ```
  *
  * @module
  */
+
+import { type Instrument, renderMml, type RenderMmlOptions } from "./mml.ts";
+
+export {
+  type Instrument,
+  type InstrumentNote,
+  type MmlNote,
+  type MmlPart,
+  parseMml,
+  type RenderedMml,
+  renderMml,
+  type RenderMmlOptions,
+} from "./mml.ts";
 
 /** A volume bus. `bgm` and `se` both feed `master`. */
 export type Bus = "master" | "bgm" | "se";
@@ -42,7 +61,7 @@ export interface LoopPoints {
   loopEnd?: number;
 }
 
-/** Decoded audio plus its loop points; made by {@linkcode createTrack} or {@linkcode GameAudio.load}. */
+/** Audio plus its loop points; made by {@linkcode GameAudio.compose} or {@linkcode createTrack}. */
 export interface Track {
   readonly buffer: AudioBuffer;
   /** Seconds. */
@@ -52,11 +71,8 @@ export interface Track {
 }
 
 /**
- * Pairs decoded audio with its loop points.
- *
- * Loop points are in seconds, not samples: `decodeAudioData` resamples to the
- * context's rate, so a sample offset taken from the file (e.g. a `LOOPSTART`
- * tag) has to be divided by the *file's* sample rate first.
+ * Pairs an `AudioBuffer` you rendered yourself with its loop points, in
+ * seconds. {@linkcode GameAudio.compose} uses this under the hood.
  *
  * @throws {RangeError} unless `0 <= loopStart < loopEnd <= buffer.duration`
  */
@@ -213,22 +229,21 @@ export class GameAudio {
     }
   }
 
-  /** Fetches and decodes audio into a {@linkcode Track}. */
-  async load(
-    source: string | URL | ArrayBuffer,
-    loop: LoopPoints = {},
-  ): Promise<Track> {
-    let data: ArrayBuffer;
-    if (source instanceof ArrayBuffer) {
-      data = source;
-    } else {
-      const response = await fetch(source);
-      if (!response.ok) {
-        throw new Error(`Failed to load ${source}: ${response.status}`);
-      }
-      data = await response.arrayBuffer();
-    }
-    return createTrack(await this.context.decodeAudioData(data), loop);
+  /**
+   * Renders MML with your instruments into a {@linkcode Track} — `@n` plays
+   * `instruments[n]`, and `L` marks where the loop starts. See
+   * {@linkcode renderMml} for the details.
+   */
+  compose(
+    mml: string,
+    instruments: readonly Instrument[],
+    options?: RenderMmlOptions,
+  ): Track {
+    const rate = this.context.sampleRate;
+    const { samples, loopStart } = renderMml(mml, instruments, rate, options);
+    const buffer = this.context.createBuffer(1, samples.length, rate);
+    buffer.copyToChannel(samples, 0);
+    return createTrack(buffer, { loopStart });
   }
 
   /** The track playing as BGM, or `null`. */
