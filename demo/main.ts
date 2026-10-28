@@ -2,6 +2,10 @@
 /// <reference lib="dom.iterable" />
 
 import { hastToDom, markdownToHast, tocFromHast } from "@kuboon/md";
+import { createHighlighterCore } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import ts from "@shikijs/langs/typescript";
+import githubDark from "@shikijs/themes/github-dark";
 import { Qrcode } from "@kuboon/qrcode-gen";
 import type { ShareButtonsElement } from "@kuboon/share-element";
 import "@kuboon/share-element";
@@ -58,6 +62,14 @@ const mdOutput = byId<HTMLDivElement>("md-output");
 const mdToc = byId<HTMLOListElement>("md-toc");
 const mdStatus = byId<HTMLParagraphElement>("md-status");
 
+// Only the languages and theme the sample uses: @kuboon/md does not pull in
+// Shiki on its own, so this is all of it that ships.
+const highlighter = createHighlighterCore({
+  langs: [ts],
+  themes: [githubDark],
+  engine: createJavaScriptRegexEngine(),
+});
+
 let renderSeq = 0;
 
 async function renderMarkdown(): Promise<void> {
@@ -65,6 +77,7 @@ async function renderMarkdown(): Promise<void> {
   const started = performance.now();
   try {
     const hast = await markdownToHast(mdSource.value, {
+      shiki: { highlighter: await highlighter },
       mermaid: matchMedia("(prefers-color-scheme: dark)").matches
         ? { bg: "#151b23", fg: "#e6edf3" }
         : undefined,

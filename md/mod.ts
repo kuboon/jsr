@@ -2,7 +2,8 @@
  * A [unified](https://unifiedjs.com/)-based Markdown → sanitized hast (HTML
  * AST) converter, with Mermaid diagrams via
  * {@link https://github.com/lukilabs/beautiful-mermaid | beautiful-mermaid}
- * and code highlighting via {@link https://shiki.style/ | Shiki}.
+ * and optional code highlighting via {@link https://shiki.style/ | Shiki}
+ * (bring your own highlighter — Shiki is not a dependency).
  *
  * ```ts
  * import { hastToHtml, markdownToHast } from "@kuboon/md";
@@ -59,7 +60,10 @@ export { type TocEntry, tocFromHast } from "./toc.ts";
 export interface MarkdownToHastOptions {
   /** Options passed to `beautiful-mermaid`'s renderer (theme colors, etc.). */
   mermaid?: RehypeMermaidOptions;
-  /** Options passed to Shiki (theme(s), default language). */
+  /**
+   * Highlight code blocks with this Shiki highlighter (theme(s), default
+   * language). Without it, code blocks stay plain `<pre><code>`.
+   */
   shiki?: RehypeShikiOptions;
   /**
    * An mdast transformer run right after parsing (GFM included), before
@@ -84,7 +88,9 @@ export interface MarkdownToHastOptions {
  *   (e.g. the host page's `#top`) are left alone.
  * - Mermaid code blocks (language `mermaid`) are rendered to SVG diagrams
  *   with `beautiful-mermaid`.
- * - Other fenced code blocks are syntax-highlighted with Shiki.
+ * - Other fenced code blocks are syntax-highlighted with Shiki when
+ *   `options.shiki` carries a highlighter; otherwise they stay plain
+ *   `<pre><code class="language-…">`.
  * - Raw HTML in the input (`<script>`, `onerror=`, `javascript:` links,
  *   ...) never reaches the output: the Markdown parser drops raw HTML
  *   outright, and every HTML fragment this function generates — the
@@ -136,9 +142,9 @@ export async function markdownToHast(
     // would only lengthen them.
     .use(remarkRehype, { clobberPrefix: "" })
     .use(rehypeSanitize, markdownSchema)
-    .use(rehypeMermaid, options.mermaid)
-    .use(rehypeShiki, options.shiki)
-    .use(rehypeHeadingLinks);
+    .use(rehypeMermaid, options.mermaid);
+  if (options.shiki) processor.use(rehypeShiki, options.shiki);
+  processor.use(rehypeHeadingLinks);
 
   const mdast = processor.parse(markdown);
   return await processor.run(mdast) as HastRoot;

@@ -10,6 +10,12 @@
     "./chat-element",
     "./bgm"
   ],
+  "imports": {
+    "shiki/core": "npm:shiki@^4.4.3/core",
+    "shiki/engine/javascript": "npm:shiki@^4.4.3/engine/javascript",
+    "@shikijs/langs/typescript": "npm:@shikijs/langs@^4.4.3/typescript",
+    "@shikijs/themes/github-dark": "npm:@shikijs/themes@^4.4.3/github-dark"
+  },
   "minimumDependencyAge": {
     "age": "P1D",
     "exclude": ["npm:@remix-run/*"]
