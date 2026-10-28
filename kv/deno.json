@@ -1,12 +1,14 @@
 {
   "name": "@kuboon/kv",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "license": "MIT",
   "exports": {
     ".": "./types.ts",
     "./memory.ts": "./memory.ts",
     "./denoKv.ts": "./denoKv.ts",
     "./turso.ts": "./turso.ts",
+    "./d1.ts": "./d1.ts",
+    "./d1Sqlite.ts": "./d1Sqlite.ts",
     "./cached.ts": "./cached.ts"
   },
   "tasks": {
