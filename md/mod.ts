@@ -1,7 +1,7 @@
 /**
  * A [unified](https://unifiedjs.com/)-based Markdown → sanitized hast (HTML
  * AST) converter, with Mermaid diagrams via
- * {@link https://github.com/lukilabs/beautiful-mermaid | beautiful-mermaid}
+ * {@link https://pele.run | Pele}
  * and optional code highlighting via {@link https://shiki.style/ | Shiki}
  * (bring your own highlighter — Shiki is not a dependency).
  *
@@ -58,7 +58,10 @@ export { type TocEntry, tocFromHast } from "./toc.ts";
 
 /** Options for {@linkcode markdownToHast}. */
 export interface MarkdownToHastOptions {
-  /** Options passed to `beautiful-mermaid`'s renderer (theme colors, etc.). */
+  /**
+   * Options passed to Pele's renderer (fonts, layout, limits). Colors come
+   * from CSS variables (`--pele-bg`, `--pele-fg`, ...), not from here.
+   */
   mermaid?: RehypeMermaidOptions;
   /**
    * Highlight code blocks with this Shiki highlighter (theme(s), default
@@ -87,7 +90,7 @@ export interface MarkdownToHastOptions {
  *   `[see](#install)` still reaches it. Links to ids not in the document
  *   (e.g. the host page's `#top`) are left alone.
  * - Mermaid code blocks (language `mermaid`) are rendered to SVG diagrams
- *   with `beautiful-mermaid`.
+ *   with Pele.
  * - Other fenced code blocks are syntax-highlighted with Shiki when
  *   `options.shiki` carries a highlighter; otherwise they stay plain
  *   `<pre><code class="language-…">`.

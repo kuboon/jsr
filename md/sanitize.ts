@@ -15,19 +15,35 @@ export const markdownSchema: Schema = {
   clobber: ["name"],
 };
 
+/** Presentation attributes Pele puts on any of its shapes. */
+const paint = [
+  "className",
+  "style",
+  "dataId",
+  "fill",
+  "fillOpacity",
+  "stroke",
+  "strokeWidth",
+  "strokeDashArray",
+  "strokeLineCap",
+  "strokeLineJoin",
+];
+
 /**
- * Sanitize schema for SVG produced by our own Mermaid renderer.
+ * Sanitize schema for SVG produced by our Mermaid renderer,
+ * {@link https://pele.run | Pele}.
  *
- * `clobber`/`clobberPrefix` are disabled here: the ids are fixed strings
- * chosen by the renderer (e.g. `arrowhead`), never derived from user
- * input, and `marker-end="url(#arrowhead)"`-style references would break
- * if the id got a clobber prefix applied.
+ * The allow-list is exactly what Pele emits (links and images off): shapes,
+ * text, nested `<svg>` for icons, and presentation attributes. Pele colors
+ * everything through CSS variables in `style`, so `style` has to stay. It
+ * emits no ids, so nothing here can clobber.
  */
 export const mermaidSvgSchema: Schema = {
   clobber: [],
   clobberPrefix: "",
   strip: [
     "script",
+    "style",
     "foreignObject",
     "animate",
     "animateMotion",
@@ -40,8 +56,6 @@ export const mermaidSvgSchema: Schema = {
   tagNames: [
     "svg",
     "g",
-    "defs",
-    "marker",
     "path",
     "polygon",
     "polyline",
@@ -51,95 +65,43 @@ export const mermaidSvgSchema: Schema = {
     "line",
     "text",
     "tspan",
-    "style",
     "title",
     "desc",
   ],
   attributes: {
-    svg: ["xmlns", "viewBox", "width", "height", "style", "className"],
-    g: ["className", "style", "transform"],
-    marker: [
-      "id",
-      "markerWidth",
-      "markerHeight",
-      "refX",
-      "refY",
-      "orient",
-      "markerUnits",
-    ],
-    path: [
-      "d",
-      "fill",
-      "stroke",
-      "strokeWidth",
-      "strokeDasharray",
-      "markerStart",
-      "markerEnd",
-      "markerMid",
-      "className",
-      "style",
-      "transform",
-    ],
-    polygon: ["points", "fill", "stroke", "strokeWidth", "className"],
-    polyline: [
-      "points",
-      "fill",
-      "stroke",
-      "strokeWidth",
-      "markerStart",
-      "markerEnd",
-      "markerMid",
-      "className",
-    ],
-    rect: [
+    svg: [
+      ...paint,
+      "xmlns",
+      "viewBox",
       "x",
       "y",
       "width",
       "height",
-      "rx",
-      "ry",
-      "fill",
-      "stroke",
-      "strokeWidth",
-      "className",
+      "role",
+      "ariaRoleDescription",
+      "dataIcon",
     ],
-    circle: ["cx", "cy", "r", "fill", "stroke", "strokeWidth", "className"],
-    ellipse: [
-      "cx",
-      "cy",
-      "rx",
-      "ry",
-      "fill",
-      "stroke",
-      "strokeWidth",
-      "className",
-    ],
-    line: [
-      "x1",
-      "y1",
-      "x2",
-      "y2",
-      "stroke",
-      "strokeWidth",
-      "strokeDasharray",
-      "markerStart",
-      "markerEnd",
-      "className",
-    ],
+    g: [...paint, "transform", "fontSize", "textAnchor"],
+    path: [...paint, "d", "transform"],
+    polygon: [...paint, "points"],
+    polyline: [...paint, "points"],
+    rect: [...paint, "x", "y", "width", "height", "rx", "ry"],
+    circle: [...paint, "cx", "cy", "r"],
+    ellipse: [...paint, "cx", "cy", "rx", "ry"],
+    line: [...paint, "x1", "y1", "x2", "y2"],
     text: [
+      ...paint,
       "x",
       "y",
       "dx",
       "dy",
       "textAnchor",
-      "fill",
       "fontSize",
       "fontWeight",
       "fontStyle",
-      "fontFamily",
-      "className",
+      "xmlSpace",
     ],
-    tspan: ["x", "y", "dx", "dy", "fill", "className"],
+    tspan: [...paint, "x", "y", "dx", "dy", "fontWeight", "fontStyle"],
   },
 };
 

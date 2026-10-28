@@ -1,22 +1,27 @@
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 import { fromHtmlIsomorphic } from "hast-util-from-html-isomorphic";
 import { sanitize } from "hast-util-sanitize";
-import { renderMermaid, type RenderOptions } from "beautiful-mermaid";
+import { render, type RenderOptions } from "pele";
 import { mermaidSvgSchema } from "./sanitize.ts";
 import { findCode, languageOf, textOf } from "./hast_utils.ts";
 import type { Element, ElementContent, Root } from "hast";
 
-/** Options forwarded to `beautiful-mermaid`'s `renderMermaid` (theme colors, spacing, etc.). */
-export type RehypeMermaidOptions = RenderOptions;
-
-/** Removes the remote Google Fonts `@import` the renderer embeds by default. */
-function stripRemoteFontImports(svg: string): string {
-  return svg.replace(/@import\s+url\(['"][^'"]*['"]\)\s*;?/g, "");
-}
+/**
+ * Options forwarded to Pele's `render` (fonts, sizes, layout, limits, etc.).
+ *
+ * Colors are not here: Pele draws with CSS variables (`--pele-bg`,
+ * `--pele-fg`, `--pele-accent`, ...), so theme the diagrams from your
+ * stylesheet. Links and images are always off — the sanitizer would strip
+ * them anyway.
+ */
+export type RehypeMermaidOptions = Omit<
+  RenderOptions,
+  "links" | "images" | "linkSchemes" | "imageSchemes" | "linkRel"
+>;
 
 /**
  * Rehype plugin that replaces Mermaid code blocks (language `mermaid`) with
- * a diagram rendered to SVG via `beautiful-mermaid`.
+ * a diagram rendered to SVG via {@link https://pele.run | Pele}.
  *
  * Run this *after* the Markdown content itself has been sanitized
  * (e.g. after `rehype-sanitize` with {@linkcode markdownSchema}): this
@@ -29,56 +34,47 @@ function stripRemoteFontImports(svg: string): string {
  * you're assembling your own `unified` pipeline instead of using that
  * function.
  *
- * @param options Theme colors and layout options passed to `beautiful-mermaid`.
+ * @param options Font, layout and limit options passed to Pele.
  * @returns A `unified` tree transformer.
  */
 export function rehypeMermaid(
   options: RehypeMermaidOptions = {},
-): (tree: Root) => Promise<void> {
-  return async function transform(tree: Root): Promise<void> {
-    const jobs: Array<() => Promise<void>> = [];
-
+): (tree: Root) => void {
+  return function transform(tree: Root): void {
     visit(tree, "element", (node, index, parent) => {
       if (node.tagName !== "pre" || !parent || index === undefined) return;
       const code = findCode(node);
       if (!code || languageOf(code) !== "mermaid") return;
 
-      const source = textOf(code);
-      jobs.push(async () => {
-        let svg: string;
-        try {
-          svg = await renderMermaid(source, options);
-        } catch (error) {
-          const message = error instanceof Error
-            ? error.message
-            : String(error);
-          const errorNode: Element = {
-            type: "element",
-            tagName: "pre",
-            properties: { className: ["mermaid-error"] },
-            children: [{
-              type: "text",
-              value: `Failed to render Mermaid diagram: ${message}`,
-            }],
-          };
-          parent.children[index] = errorNode;
-          return;
-        }
-
-        const fragment = fromHtmlIsomorphic(stripRemoteFontImports(svg), {
-          fragment: true,
-        });
-        const clean = sanitize(fragment, mermaidSvgSchema) as Root;
-        const wrapper: Element = {
-          type: "element",
-          tagName: "div",
-          properties: { className: ["mermaid-diagram"] },
-          children: clean.children as ElementContent[],
-        };
-        parent.children[index] = wrapper;
-      });
+      parent.children[index] = diagram(textOf(code), options);
+      return SKIP;
     });
+  };
+}
 
-    await Promise.all(jobs.map((job) => job()));
+function diagram(source: string, options: RehypeMermaidOptions): Element {
+  let svg: string;
+  try {
+    svg = render(source, { ...options, links: false, images: false }).svg;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      type: "element",
+      tagName: "pre",
+      properties: { className: ["mermaid-error"] },
+      children: [{
+        type: "text",
+        value: `Failed to render Mermaid diagram: ${message}`,
+      }],
+    };
+  }
+
+  const fragment = fromHtmlIsomorphic(svg, { fragment: true });
+  const clean = sanitize(fragment, mermaidSvgSchema) as Root;
+  return {
+    type: "element",
+    tagName: "div",
+    properties: { className: ["mermaid-diagram"] },
+    children: clean.children as ElementContent[],
   };
 }

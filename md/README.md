@@ -17,9 +17,10 @@
   本文中の `[リンク](#setup)` のうち、文書内の id を指すものはあわせて `#setup-`
   に書き換えるので、Markdown 側では意識せずにリンクできる。
   文書外のアンカー（ホストページの `#top` など）へのリンクは変更しない。
-- `` ```mermaid `` コードブロックを
-  [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) で SVG
-  図として描画。
+- `` ```mermaid `` コードブロックを [Pele](https://pele.run) で SVG
+  図として描画（Mermaid 12.1 の全図種に対応。ノード ID に日本語をそのまま
+  使ってもよい）。色は CSS 変数（`--pele-bg` / `--pele-fg` / `--pele-accent`
+  など）で指定する。詳しくは [Pele の Theming](https://pele.run/theming)。
 - それ以外のコードブロックは、highlighter を渡したときだけ
   [Shiki](https://shiki.style/) でシンタックスハイライト。Shiki
   はこのパッケージの依存ではない（[Shiki を使う](#shiki-を使う) を参照）。
@@ -190,8 +191,8 @@ import { markdownToHast } from "@kuboon/md";
 import { visit } from "unist-util-visit";
 
 const hast = await markdownToHast("# Hello", {
-  // beautiful-mermaid の RenderOptions（テーマ色など）
-  mermaid: { bg: "#0f0f0f", fg: "#e0e0e0" },
+  // Pele の RenderOptions（フォント、サイズ、レイアウトなど。色は CSS 変数で）
+  mermaid: { fontSize: 14 },
   // Shiki でハイライトする場合は highlighter を渡す（下記参照）
   // shiki: { highlighter, theme: "github-dark" },
   // ライト/ダーク両対応もできる
@@ -268,7 +269,8 @@ const hast = await markdownToHast(source, {
    `shikiSchema`、`sanitize.ts`
    を参照）で個別にサニタイズしてから本文に埋め込まれる。 `<foreignObject>` や
    `<script>`、イベントハンドラ属性 (`on*`)
-   は許可リストに存在しないため必ず除去される。
+   は許可リストに存在しないため必ず除去される。Mermaid の `click`
+   によるリンクと画像は描画時点で無効にしている。
 4. 見出しや脚注の `id` はユーザーが書いたテキストから生成されるため、必ず
    ハイフンを含むようにする（含まなければ末尾に `-`
    を付ける）。ハイフンを含む名前は JS の識別子になれず、`window.config`
@@ -305,7 +307,7 @@ const hast = await markdownToHast(source, {
 ## Links
 
 - JSR: <https://jsr.io/@kuboon/md>
-- beautiful-mermaid: <https://github.com/lukilabs/beautiful-mermaid>
+- Pele: <https://pele.run>
 - Shiki: <https://shiki.style/>
 
 ## License

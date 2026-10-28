@@ -36,10 +36,10 @@ console.log(greet("world"));
 
 \`\`\`mermaid
 graph LR
-  A[Markdown] --> B[hast]
-  B --> C[HTML]
-  B --> D[DOM]
-  B --> E[TOC]
+  Markdown --> hast
+  hast --> HTML
+  hast --> DOM
+  hast --> 目次
 \`\`\`
 
 ## Table and tasks
@@ -78,9 +78,6 @@ async function renderMarkdown(): Promise<void> {
   try {
     const hast = await markdownToHast(mdSource.value, {
       shiki: { highlighter: await highlighter },
-      mermaid: matchMedia("(prefers-color-scheme: dark)").matches
-        ? { bg: "#151b23", fg: "#e6edf3" }
-        : undefined,
     });
     if (seq !== renderSeq) return;
     mdOutput.replaceChildren(hastToDom(hast));
