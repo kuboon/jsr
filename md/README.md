@@ -20,9 +20,10 @@
 - `` ```mermaid `` コードブロックを
   [beautiful-mermaid](https://github.com/lukilabs/beautiful-mermaid) で SVG
   図として描画。
-- それ以外のコードブロックは [Shiki](https://shiki.style/)
-  でシンタックスハイライト（既定は `web`
-  バンドル。[バンドルサイズ](#バンドルサイズと-shiki) を参照）。
+- それ以外のコードブロックは、highlighter を渡したときだけ
+  [Shiki](https://shiki.style/) でシンタックスハイライト。Shiki
+  はこのパッケージの依存ではない（[Shiki を使う](#shiki-を使う) を参照）。
+  渡さなければ `<pre><code class="language-ts">` のまま出力される。
 - mdast 段階（remark-rehype で hast に変換する前）に独自の transformer
   を挟める。
 - 入力 Markdown 中の生 HTML（`<script>` や `onerror=` 属性、`javascript:`
@@ -191,12 +192,10 @@ import { visit } from "unist-util-visit";
 const hast = await markdownToHast("# Hello", {
   // beautiful-mermaid の RenderOptions（テーマ色など）
   mermaid: { bg: "#0f0f0f", fg: "#e0e0e0" },
-  // Shiki のテーマ設定
-  shiki: { theme: "github-dark" },
-  // ライト/ダーク両対応もできる
-  // shiki: { themes: { light: "github-light", dark: "github-dark" } },
-  // 自前の highlighter を渡してバンドルを削ることもできる（下記参照）
+  // Shiki でハイライトする場合は highlighter を渡す（下記参照）
   // shiki: { highlighter, theme: "github-dark" },
+  // ライト/ダーク両対応もできる
+  // shiki: { highlighter, themes: { light: "github-light", dark: "github-dark" } },
   // remark-rehype で hast に変換する直前、mdast に対して好きな変換をかけられる
   mdastTransform: (tree) => {
     visit(tree, "heading", (node) => {
@@ -206,28 +205,19 @@ const hast = await markdownToHast("# Hello", {
 });
 ```
 
-## バンドルサイズと Shiki
+## Shiki を使う
 
-Shiki は文法とテーマの塊で、既定でどれを積むかがそのままビルド成果物の大きさに
-なる。このパッケージの既定は Shiki の `web`
-バンドル（主要言語を必要時に読み込む）。
+Shiki は文法とテーマの塊で、どれを積むかがそのままビルド成果物の大きさに
+なる（`shiki` 全言語で 12 MB、`shiki/bundle/web` で 6.8 MB、`node_modules` は
+どれでも 24 MB）。そのためこのパッケージは Shiki に依存せず、ハイライトしたい
+ときだけ利用側が highlighter を渡す。渡さなければ Shiki は依存グラフに
+一切入らない。
 
-`md/mod.ts` を `deno bundle --minify --platform browser` した実測値:
+必要な言語とテーマだけを積んだ highlighter を渡すのがおすすめ（352 KB
+程度[^1]）:
 
-| Shiki の入れ方                           | バンドル       | `node_modules` |
-| ---------------------------------------- | -------------- | -------------- |
-| `shiki`（全言語）                        | 12 MB          | 24 MB          |
-| **`shiki/bundle/web`（既定）**           | **6.8 MB**     | 24 MB          |
-| `createHighlighterCore` + 必要な言語だけ | **352 KB**[^1] | 24 MB          |
-
-[^1]: Shiki 単体での実測（`shiki/core` + JS 正規表現エンジン + TypeScript +
-    JSON + 1テーマ）。
-
-**`node_modules` はどれでも変わらない。** Shiki は全文法を `@shikijs/langs`
-1パッケージで配っているので、どのエントリポイントから import しても npm
-は同じものを入れる。変わるのはビルド成果物のほうだけ。
-
-既定より小さくしたいときは、自分で組んだ highlighter を渡す:
+[^1]: `shiki/core` + JS 正規表現エンジン + TypeScript + JSON + 1テーマを
+    `deno bundle --minify --platform browser` した実測値。
 
 ```ts ignore
 import { createHighlighterCore } from "shiki/core";
@@ -250,6 +240,17 @@ const hast = await markdownToHast(source, {
 渡した highlighter
 が持っていない言語は、未知の言語と同じくプレーンテキストとして 出力される（Shiki
 のマークアップは付くが、トークンごとの色は付かない）。
+
+サイズを気にせず全言語を必要時に読み込みたいなら、`web` バンドルの `codeToHast`
+をそのまま渡せる（0.7 までの既定の挙動）:
+
+```ts ignore
+import { codeToHast } from "shiki/bundle/web";
+
+const hast = await markdownToHast(source, {
+  shiki: { highlighter: { codeToHast } },
+});
+```
 
 ## セキュリティに関する設計
 
@@ -280,8 +281,8 @@ const hast = await markdownToHast(source, {
   hast ツリーに変換する。
 - `rehypeMermaid(options?)` — Mermaid コードブロックを SVG に置き換える rehype
   プラグイン単体。
-- `rehypeShiki(options?)` — コードブロックを Shiki でハイライトする rehype
-  プラグイン単体。
+- `rehypeShiki(options)` — コードブロックを渡された Shiki highlighter
+  でハイライトする rehype プラグイン単体。
 - `rehypeHeadingLinks(options?)` — 見出しに `id` と自己リンクを付与し、
   ツリー内の全 id を上記のルールで clobbering 安全にする rehype
   プラグイン単体。全 id が出そろった最後に実行する。

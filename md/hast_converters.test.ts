@@ -7,6 +7,18 @@ import { markdownToHast } from "./mod.ts";
 import { hastToHtml } from "./hast_to_html.ts";
 import { hastToDom } from "./hast_to_dom.ts";
 import { hastToElement } from "./hast_to_element.ts";
+import { createHighlighterCore } from "shiki/core";
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
+import ts from "@shikijs/langs/typescript";
+import githubDark from "@shikijs/themes/github-dark";
+
+const shiki = {
+  highlighter: await createHighlighterCore({
+    langs: [ts],
+    themes: [githubDark],
+    engine: createJavaScriptRegexEngine(),
+  }),
+};
 
 Deno.test("hastToHtml: serializes a hast tree", async () => {
   const hast = await markdownToHast("# Hi\n\nSome **bold** text.");
@@ -99,6 +111,7 @@ Deno.test("hastToElement: React's createElement works through a normalizing fact
   // imports React at all.
   const hast = await markdownToHast(
     "# Hi\n\nSome **bold** text.\n\n```ts\nconst x = 1;\n```",
+    { shiki },
   );
   const html = renderToStaticMarkup(
     hastToElement(hast, reactFactory) as ReactNode,
@@ -111,7 +124,7 @@ Deno.test("hastToElement: React's createElement works through a normalizing fact
 });
 
 Deno.test("markdownToHast: Shiki's nodes carry hast property names", async () => {
-  const hast = await markdownToHast("```ts\nconst x = 1;\n```");
+  const hast = await markdownToHast("```ts\nconst x = 1;\n```", { shiki });
   const names = new Set<string>();
   // deno-lint-ignore no-explicit-any
   const walk = (node: any) => {
@@ -135,7 +148,9 @@ Deno.test("markdownToHast: Shiki's nodes carry hast property names", async () =>
 });
 
 Deno.test("markdownToHast: normalizing Shiki does not change the HTML", async () => {
-  const html = hastToHtml(await markdownToHast("```ts\nconst x = 1;\n```"));
+  const html = hastToHtml(
+    await markdownToHast("```ts\nconst x = 1;\n```", { shiki }),
+  );
   assertStringIncludes(html, '<pre class="shiki github-dark"');
   assertStringIncludes(html, 'style="background-color:#24292e;color:#e1e4e8"');
   assertStringIncludes(html, 'tabindex="0"');

@@ -1,6 +1,5 @@
 import { visit } from "unist-util-visit";
 import { sanitize } from "hast-util-sanitize";
-import { codeToHast } from "shiki/bundle/web";
 import { shikiSchema } from "./sanitize.ts";
 import {
   findCode,
@@ -36,24 +35,13 @@ export interface ShikiHighlighter {
 
 /** Options for {@linkcode rehypeShiki}. */
 export interface RehypeShikiOptions {
-  /** Single Shiki theme name. Ignored if `themes` is set. Default: `"github-dark"`. */
-  theme?: string;
-  /** Dual light/dark themes, rendered with CSS variables for live switching. */
-  themes?: Record<string, string>;
-  /** Language used for code blocks with no (or an unrecognized) language. Default: `"text"`. */
-  defaultLanguage?: string;
   /**
-   * Highlighter to use instead of the bundled one.
+   * The highlighter. Required: this package does not depend on Shiki itself, so
+   * the languages and themes you ship are exactly the ones you load here.
    *
-   * The default is Shiki's `web` bundle: every language it carries, loaded on
-   * demand, nothing to configure. Pass a `createHighlighterCore()` highlighter
-   * carrying only the languages and themes you actually render when the bundled
-   * one is more than you want to ship — languages it does not carry then come
-   * back through the plain-text fallback, exactly as an unknown language does.
-   *
-   * Install size is the same either way: Shiki ships every grammar in one npm
-   * package no matter which entry point you import. What changes is the built
-   * output.
+   * A `createHighlighterCore()` highlighter carrying only what you render keeps
+   * the built output small. Languages it does not carry come back through the
+   * plain-text fallback, exactly as an unknown language does.
    *
    * @example
    * ```ts ignore
@@ -70,8 +58,21 @@ export interface RehypeShikiOptions {
    *
    * await markdownToHast(source, { shiki: { highlighter, theme: "github-dark" } });
    * ```
+   *
+   * @example Every language, loaded on demand (large)
+   * ```ts ignore
+   * import { codeToHast } from "shiki/bundle/web";
+   *
+   * await markdownToHast(source, { shiki: { highlighter: { codeToHast } } });
+   * ```
    */
-  highlighter?: ShikiHighlighter;
+  highlighter: ShikiHighlighter;
+  /** Single Shiki theme name. Ignored if `themes` is set. Default: `"github-dark"`. */
+  theme?: string;
+  /** Dual light/dark themes, rendered with CSS variables for live switching. */
+  themes?: Record<string, string>;
+  /** Language used for code blocks with no (or an unrecognized) language. Default: `"text"`. */
+  defaultLanguage?: string;
 }
 
 /**
@@ -86,19 +87,17 @@ export interface RehypeShikiOptions {
  * if you're assembling your own `unified` pipeline instead of using that
  * function.
  *
- * @param options Theme(s) and default-language settings passed to Shiki.
+ * @param options The highlighter, plus theme(s) and default-language settings.
  * @returns A `unified` tree transformer.
  */
 export function rehypeShiki(
-  options: RehypeShikiOptions = {},
+  options: RehypeShikiOptions,
 ): (tree: Root) => Promise<void> {
   const themeOption = options.themes
     ? { themes: options.themes }
     : { theme: options.theme ?? "github-dark" };
   const defaultLanguage = options.defaultLanguage ?? "text";
-  const toHast: ShikiHighlighter["codeToHast"] = options.highlighter
-    ? options.highlighter.codeToHast.bind(options.highlighter)
-    : codeToHast;
+  const toHast = options.highlighter.codeToHast.bind(options.highlighter);
 
   return async function transform(tree: Root): Promise<void> {
     const jobs: Array<() => Promise<void>> = [];

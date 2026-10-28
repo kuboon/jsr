@@ -7,6 +7,12 @@ import ts from "@shikijs/langs/typescript";
 import githubDark from "@shikijs/themes/github-dark";
 import { markdownToHast } from "./mod.ts";
 
+const highlighter = await createHighlighterCore({
+  langs: [ts],
+  themes: [githubDark],
+  engine: createJavaScriptRegexEngine(),
+});
+
 async function render(
   markdown: string,
   options?: Parameters<typeof markdownToHast>[1],
@@ -69,13 +75,26 @@ Deno.test("markdownToHast: mermaid diagrams escape malicious node labels", async
 });
 
 Deno.test("markdownToHast: highlights other fenced code blocks with Shiki", async () => {
-  const html = await render("```ts\nconst x: number = 1;\n```\n");
+  const html = await render("```ts\nconst x: number = 1;\n```\n", {
+    shiki: { highlighter },
+  });
   assertStringIncludes(html, "shiki");
   assertStringIncludes(html, "<span");
 });
 
+Deno.test("markdownToHast: without a highlighter, code blocks stay plain", async () => {
+  const html = await render("```ts\nconst x = 1;\n```\n");
+  assertStringIncludes(
+    html,
+    '<pre><code class="language-ts">const x = 1;\n</code></pre>',
+  );
+  assertEquals(html.includes("shiki"), false);
+});
+
 Deno.test("markdownToHast: falls back gracefully for unknown languages", async () => {
-  const html = await render("```not-a-real-language\nhello\n```\n");
+  const html = await render("```not-a-real-language\nhello\n```\n", {
+    shiki: { highlighter },
+  });
   assertStringIncludes(html, "hello");
 });
 
@@ -147,17 +166,11 @@ Deno.test("markdownToHast: footnote links point at their targets", async () => {
   assertStringIncludes(html, 'href="#fnref-1"');
 });
 
-Deno.test("rehypeShiki: a core highlighter replaces the bundled one", async () => {
+Deno.test("rehypeShiki: a core highlighter is accepted as-is", async () => {
   // The point of this test is the type as much as the behavior: a real
   // `HighlighterCore` has to satisfy `ShikiHighlighter`, or the option is
   // useless. It carries TypeScript and nothing else, so `json` comes back
   // through the plain-text fallback — Shiki markup, but no per-token colors.
-  const highlighter = await createHighlighterCore({
-    langs: [ts],
-    themes: [githubDark],
-    engine: createJavaScriptRegexEngine(),
-  });
-
   const highlighted = await render("```ts\nconst x: number = 1;\n```\n", {
     shiki: { highlighter, theme: "github-dark" },
   });

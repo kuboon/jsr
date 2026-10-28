@@ -1324,6 +1324,11 @@
     }
   },
   "workspace": {
+    "dependencies": [
+      "npm:@shikijs/langs@^4.4.3",
+      "npm:@shikijs/themes@^4.4.3",
+      "npm:shiki@^4.4.3"
+    ],
     "members": {
       "bgm": {
         "dependencies": [
