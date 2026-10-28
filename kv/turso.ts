@@ -5,8 +5,10 @@
  * エントリを格納する。`update` は `version` 列を使った楽観的並行制御で、書き込み
  * 衝突時は {@link KvUpdateResult.ok} が `false` で返る（再試行はしない）。
  *
- * クライアントは呼び出し側が渡す（`@libsql/client` の `Client`）。エッジで動かす
- * なら `@libsql/client/web`、ローカル/テストなら `@libsql/client/node` の
+ * クライアントは呼び出し側が渡す。このモジュール自体は `@libsql/client` に
+ * 依存せず、{@link LibsqlLike}（`execute` だけの構造的な型）を受け取るので、
+ * `@libsql/client` の `Client` をそのまま渡せる。エッジで動かすなら
+ * `@libsql/client/web`、ローカル/テストなら `@libsql/client/node` の
  * `file:` / `:memory:` を渡せる。テーブルは初回アクセス時に遅延作成する。
  *
  * 値は JSON でシリアライズするので、JSON 表現可能な値のみ格納できる。
@@ -27,7 +29,25 @@
  * @module
  */
 
-import type { Client } from "@libsql/client";
+/** `execute` に渡すステートメント。`@libsql/client` の `InStatement` の部分集合。 */
+export type LibsqlStatement = string | {
+  sql: string;
+  args: (string | number | bigint | boolean | null)[];
+};
+
+/** `execute` の結果。`@libsql/client` の `ResultSet` の部分集合。 */
+export interface LibsqlResult {
+  rows: Record<string, unknown>[];
+  rowsAffected: number;
+}
+
+/**
+ * libSQL クライアントのうち、このモジュールが使う部分集合。
+ * `@libsql/client` の `Client` はこれを満たす。
+ */
+export interface LibsqlLike {
+  execute(stmt: LibsqlStatement): Promise<LibsqlResult>;
+}
 import { monotonicUlid } from "@std/ulid";
 
 import type {
@@ -98,9 +118,9 @@ const CREATE_TABLE =
   "CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER, version INTEGER NOT NULL DEFAULT 0)";
 
 /** クライアント毎にテーブル作成を一度だけ実行するためのキャッシュ。 */
-const ensured = new WeakMap<Client, Promise<void>>();
+const ensured = new WeakMap<LibsqlLike, Promise<void>>();
 
-const ensureTable = (client: Client): Promise<void> => {
+const ensureTable = (client: LibsqlLike): Promise<void> => {
   let promise = ensured.get(client);
   if (!promise) {
     promise = client.execute(CREATE_TABLE).then(() => {});
@@ -117,12 +137,12 @@ const asNumber = (value: unknown): number | null =>
  */
 export class TursoKvRepo<TVal> implements KvRepo<TVal, KvKeyPart, KvOptions> {
   /**
-   * @param client libSQL クライアント（`@libsql/client` の `createClient` の戻り値）。
+   * @param client libSQL クライアント（`@libsql/client` の `createClient` の戻り値等）。
    * @param prefix このリポジトリ配下のエントリ共通プレフィックス。
    * @param options 全エントリに適用されるデフォルト {@link KvOptions}（`expireIn` 等）。
    */
   constructor(
-    public client: Client,
+    public client: LibsqlLike,
     public prefix: KvKey = [],
     public options: KvOptions = {},
   ) {}
