@@ -154,9 +154,12 @@ Deno.test("markdownToHast: links to renamed ids follow them, others are left alo
   assertStringIncludes(html, '<a href="https://example.com/#setup">out</a>');
 });
 
-Deno.test("markdownToHast: mermaid's own SVG ids are left alone", async () => {
-  const html = await render("```mermaid\ngraph TD\nA-->B\n```\n");
-  assertStringIncludes(html, 'id="arrowhead"');
+Deno.test("markdownToHast: mermaid node ids may be Japanese", async () => {
+  // beautiful-mermaid returned an empty, zero-width SVG for this.
+  const html = await render("```mermaid\ngraph LR\n  駅-->広場\n```\n");
+  assertStringIncludes(html, ">駅</text>");
+  assertStringIncludes(html, ">広場</text>");
+  assertEquals(/<svg[^>]* width="0"/.test(html), false);
 });
 
 Deno.test("markdownToHast: footnote links point at their targets", async () => {
