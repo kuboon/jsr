@@ -96,6 +96,26 @@ it, appends the result, and posts again.
 the network answer — a router running in the page, or a script, which is how a
 static host serves a working chat.
 
+## Drawing the replies
+
+Replies are shown as text, with their URLs linked. A model that answers in
+Markdown gets `renderReply`: given a reply's text, it returns what goes in the
+bubble, as a node or a promise of one.
+
+```ts ignore
+import { hastToDom, markdownToHast } from "@kuboon/md";
+
+openChat({
+  transport: "/helper-agent",
+  renderReply: async (text) => hastToDom(await markdownToHast(text)),
+});
+```
+
+It runs again on every streamed piece; while a promise is pending, the bubble
+keeps what it showed before. What it returns goes into the page as it is, so it
+must sanitise what the model wrote (`@kuboon/md` does). On a panel of your own,
+set `panel.renderReply`.
+
 ## Styling
 
 Light DOM, with default styles under `.chat-panel__*` classes. Colors come from

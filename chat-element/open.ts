@@ -17,7 +17,7 @@
  */
 
 import { createChatPanel } from "./element.ts";
-import type { ChatPanelElement } from "./element.ts";
+import type { ChatPanelElement, ReplyRenderer } from "./element.ts";
 import { pickElementTool } from "./picker.ts";
 import { ChatSession } from "./session.ts";
 import type { ChatSessionOptions } from "./session.ts";
@@ -30,6 +30,8 @@ export interface OpenChatOptions extends ChatSessionOptions {
   greeting?: string;
   /** Placeholder for the composer. */
   placeholder?: string;
+  /** Draws the assistant's replies, such as from Markdown — see {@link ReplyRenderer}. */
+  renderReply?: ReplyRenderer;
   /**
    * An existing conversation to show, instead of starting one.
    *
@@ -87,6 +89,7 @@ export function openChat(options: OpenChatOptions): ChatDialog {
     title,
     greeting,
     placeholder,
+    renderReply,
     modal = false,
     container = document.body,
   } = options;
@@ -109,6 +112,7 @@ export function openChat(options: OpenChatOptions): ChatDialog {
   if (title !== undefined) panel.heading = title;
   if (greeting !== undefined) panel.greeting = greeting;
   if (placeholder !== undefined) panel.placeholder = placeholder;
+  if (renderReply !== undefined) panel.renderReply = renderReply;
 
   dialog.append(panel);
   container.append(dialog);

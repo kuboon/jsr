@@ -41,7 +41,11 @@ export {
   DEFAULT_TAG_NAME,
   defineChatPanel,
 } from "./element.ts";
-export type { ChatPanelElement, ChatPanelLabels } from "./element.ts";
+export type {
+  ChatPanelElement,
+  ChatPanelLabels,
+  ReplyRenderer,
+} from "./element.ts";
 
 export { openChat } from "./open.ts";
 export type { ChatDialog, OpenChatOptions } from "./open.ts";

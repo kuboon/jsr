@@ -80,6 +80,19 @@ export function chatPanelLabels(lang: string): Required<ChatPanelLabels> {
 }
 
 /**
+ * Draws one of the assistant's replies — for a model that answers in Markdown, say.
+ *
+ * Given the reply's text, it returns what goes in the bubble: a node (a fragment for several),
+ * or a promise of one. While a promise is pending the bubble shows what it showed before, so a
+ * streaming reply does not flash back to plain text on every piece; the first draw, and a
+ * renderer that throws or rejects, show the text with its URLs linked, as with no renderer.
+ *
+ * It is called again whenever the reply changes, which while it streams is on every piece. What
+ * it returns goes into the page as it is: a renderer of text a model wrote must sanitise it.
+ */
+export type ReplyRenderer = (content: string) => Node | Promise<Node>;
+
+/**
  * A chat panel: the element's own API on top of `HTMLElement`.
  *
  * A type rather than a class, because the class cannot exist until there is an `HTMLElement` to
@@ -103,6 +116,8 @@ export interface ChatPanelElement extends HTMLElement {
   picker: boolean;
   /** What the controls are called, overriding the names the language would give them. */
   labels: ChatPanelLabels;
+  /** Draws the assistant's replies; `null` shows them as text with their URLs linked. */
+  renderReply: ReplyRenderer | null;
 }
 
 /** Built once, on the first {@link defineChatPanel} call in a DOM. */
@@ -114,6 +129,7 @@ function buildElementClass(): new () => ChatPanelElement {
   elementClass = class extends HTMLElement implements ChatPanelElement {
     #session: ChatSession | null = null;
     #overrides: ChatPanelLabels = {};
+    #renderReply: ReplyRenderer | null = null;
     #built = false;
     #listening: AbortController | null = null;
 
@@ -205,6 +221,18 @@ function buildElementClass(): new () => ChatPanelElement {
     }
     set labels(value: ChatPanelLabels) {
       this.#overrides = { ...this.#overrides, ...value };
+      this.#render();
+    }
+
+    get renderReply(): ReplyRenderer | null {
+      return this.#renderReply;
+    }
+    set renderReply(value: ReplyRenderer | null) {
+      if (value === this.#renderReply) return;
+      this.#renderReply = value;
+      // Every reply is drawn again with the new renderer.
+      this.#rows = [];
+      this.#log?.replaceChildren();
       this.#render();
     }
 
@@ -364,7 +392,9 @@ function buildElementClass(): new () => ChatPanelElement {
      * show, so all that is redrawn is the bubble that is growing.
      */
     #renderLog(session: ChatSession | null): void {
-      const rows = session === null ? [] : logRows(session, this.greeting);
+      const rows = session === null
+        ? []
+        : logRows(session, this.greeting, this.#renderReply);
       const atBottom =
         this.#log.scrollHeight - this.#log.scrollTop - this.#log.clientHeight <
           32;
@@ -372,7 +402,7 @@ function buildElementClass(): new () => ChatPanelElement {
       rows.forEach((row, index) => {
         const existing = this.#rows[index];
         if (existing?.key === row.key) return;
-        const node = row.draw();
+        const node = row.draw(existing?.node);
         if (existing === undefined) this.#log.append(node);
         else existing.node.replaceWith(node);
         this.#rows[index] = { key: row.key, node };
@@ -386,26 +416,30 @@ function buildElementClass(): new () => ChatPanelElement {
   return elementClass;
 }
 
-/** One line of the log: what it shows, as a key, and how to draw it. */
+/** One line of the log: what it shows, as a key, and how to draw it in place of `previous`. */
 interface Row {
   key: string;
-  draw: () => HTMLElement;
+  draw: (previous?: HTMLElement) => HTMLElement;
 }
 
-function logRows(session: ChatSession, greeting: string): Row[] {
+function logRows(
+  session: ChatSession,
+  greeting: string,
+  renderReply: ReplyRenderer | null,
+): Row[] {
   const messages = session.messages;
   const results = resultsById(messages);
   const rows: Row[] = [];
 
   if (greeting !== "" && messages.length === 0) {
-    rows.push(bubbleRow("assistant", greeting));
+    rows.push(bubbleRow("assistant", greeting, renderReply));
   }
 
   for (const message of messages) {
     if (message.role === "user") rows.push(bubbleRow("user", message.content));
     if (message.role !== "assistant") continue;
     if (message.content !== "") {
-      rows.push(bubbleRow("assistant", message.content));
+      rows.push(bubbleRow("assistant", message.content, renderReply));
     }
     for (const call of message.toolCalls ?? []) {
       rows.push(toolRow(call, results.get(call.id)));
@@ -430,16 +464,61 @@ function logRows(session: ChatSession, greeting: string): Row[] {
   return rows;
 }
 
-function bubbleRow(role: "user" | "assistant", content: string): Row {
+function bubbleRow(
+  role: "user" | "assistant",
+  content: string,
+  renderReply: ReplyRenderer | null = null,
+): Row {
   return {
     key: `${role}:${content}`,
-    draw: () => {
+    draw: (previous) => {
       const li = el("li", `chat-panel__bubble chat-panel__bubble--${role}`);
       if (role === "user") li.textContent = content;
-      else li.append(...linkify(content));
+      else if (renderReply === null) li.append(...linkify(content));
+      else drawReply(li, content, renderReply, previous);
       return li;
     },
   };
+}
+
+const RENDERED = "chat-panel__bubble--rendered";
+
+/** A reply through the page's renderer — see {@link ReplyRenderer}. */
+function drawReply(
+  li: HTMLLIElement,
+  content: string,
+  renderReply: ReplyRenderer,
+  previous: HTMLElement | undefined,
+): void {
+  const plain = () => {
+    li.classList.remove(RENDERED);
+    li.replaceChildren(...linkify(content));
+  };
+  const rendered = (node: Node) => {
+    li.classList.add(RENDERED);
+    li.replaceChildren(node);
+  };
+
+  let result: Node | Promise<Node>;
+  try {
+    result = renderReply(content);
+  } catch {
+    plain();
+    return;
+  }
+  if (!(result instanceof Promise)) {
+    rendered(result);
+    return;
+  }
+
+  // Until it resolves: the bubble this one replaces, while the same reply streams in.
+  if (previous?.classList.contains(RENDERED)) {
+    li.classList.add(RENDERED);
+    li.append(...Array.from(previous.childNodes, (n) => n.cloneNode(true)));
+  } else {
+    plain();
+  }
+  result.then(rendered, plain);
 }
 
 function toolRow(call: ToolCall, result: ToolResult | undefined): Row {
@@ -604,6 +683,9 @@ const DEFAULT_STYLE = `
   align-self: flex-start;
   border: 1px solid var(--chat-panel-border, color-mix(in srgb, CanvasText 20%, Canvas));
 }
+.chat-panel__bubble--rendered { white-space: normal; }
+.chat-panel__bubble--rendered > :first-child { margin-top: 0; }
+.chat-panel__bubble--rendered > :last-child { margin-bottom: 0; }
 .chat-panel__link { color: inherit; overflow-wrap: anywhere; }
 .chat-panel__tool {
   align-self: flex-start;
