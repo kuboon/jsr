@@ -80,6 +80,49 @@ export function chatPanelLabels(lang: string): Required<ChatPanelLabels> {
 }
 
 /**
+ * Draws one of the assistant's replies — for a model that answers in Markdown, say. The default
+ * is {@link linkifyReply}.
+ *
+ * Given the reply's text, it returns what goes in the bubble: a node (a fragment for several),
+ * or a promise of one. While a promise is pending the bubble shows what it showed before, so a
+ * streaming reply does not flash back to plain text on every piece; the first draw, and a
+ * renderer that throws or rejects, show {@link linkifyReply}'s.
+ *
+ * It is called again whenever the reply changes, which while it streams is on every piece. What
+ * it returns goes into the page as it is: a renderer of text a model wrote must sanitise it.
+ */
+export type ReplyRenderer = (content: string) => Node | Promise<Node>;
+
+/**
+ * The default {@link ReplyRenderer}: the text as it is, line breaks kept, with its `http(s)` URLs
+ * linked.
+ *
+ * Only `http:` and `https:` match, which is what makes this safe to run over text a model wrote:
+ * a `javascript:` URL is not a URL here, it is a word. Trailing punctuation is left out of the
+ * href, because a URL at the end of a sentence is followed by the sentence's full stop.
+ */
+export function linkifyReply(content: string): Node {
+  const span = el("span", "chat-panel__text");
+  let at = 0;
+
+  for (const match of content.matchAll(/https?:\/\/[^\s<>"']+/g)) {
+    const href = match[0].replace(/[.,;:!?)\]}'"]+$/, "");
+    const start = match.index;
+    if (start > at) span.append(content.slice(at, start));
+    const anchor = el("a", "chat-panel__link");
+    anchor.href = href;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    anchor.textContent = href;
+    span.append(anchor);
+    at = start + href.length;
+  }
+
+  if (at < content.length) span.append(content.slice(at));
+  return span;
+}
+
+/**
  * A chat panel: the element's own API on top of `HTMLElement`.
  *
  * A type rather than a class, because the class cannot exist until there is an `HTMLElement` to
@@ -93,8 +136,6 @@ export interface ChatPanelElement extends HTMLElement {
   session: ChatSession | null;
   /** The heading, reflected to the `heading` attribute. */
   heading: string;
-  /** What it says before the person has typed anything, reflected to `greeting`. */
-  greeting: string;
   /** The composer's placeholder, reflected to `placeholder`. */
   placeholder: string;
   /** Whether a close button is drawn, reflected to `closable`. */
@@ -103,6 +144,11 @@ export interface ChatPanelElement extends HTMLElement {
   picker: boolean;
   /** What the controls are called, overriding the names the language would give them. */
   labels: ChatPanelLabels;
+  /**
+   * Draws the assistant's replies; {@link linkifyReply} unless set. Set it before the
+   * conversation starts: replies already drawn are not drawn again.
+   */
+  renderReply: ReplyRenderer;
 }
 
 /** Built once, on the first {@link defineChatPanel} call in a DOM. */
@@ -114,6 +160,7 @@ function buildElementClass(): new () => ChatPanelElement {
   elementClass = class extends HTMLElement implements ChatPanelElement {
     #session: ChatSession | null = null;
     #overrides: ChatPanelLabels = {};
+    renderReply: ReplyRenderer = linkifyReply;
     #built = false;
     #listening: AbortController | null = null;
 
@@ -129,7 +176,6 @@ function buildElementClass(): new () => ChatPanelElement {
     static get observedAttributes(): string[] {
       return [
         "heading",
-        "greeting",
         "placeholder",
         "closable",
         "no-picker",
@@ -170,13 +216,6 @@ function buildElementClass(): new () => ChatPanelElement {
     }
     set heading(value: string) {
       this.setAttribute("heading", value);
-    }
-
-    get greeting(): string {
-      return this.getAttribute("greeting") ?? "";
-    }
-    set greeting(value: string) {
-      this.setAttribute("greeting", value);
     }
 
     get placeholder(): string {
@@ -364,7 +403,7 @@ function buildElementClass(): new () => ChatPanelElement {
      * show, so all that is redrawn is the bubble that is growing.
      */
     #renderLog(session: ChatSession | null): void {
-      const rows = session === null ? [] : logRows(session, this.greeting);
+      const rows = session === null ? [] : logRows(session);
       const atBottom =
         this.#log.scrollHeight - this.#log.scrollTop - this.#log.clientHeight <
           32;
@@ -372,7 +411,7 @@ function buildElementClass(): new () => ChatPanelElement {
       rows.forEach((row, index) => {
         const existing = this.#rows[index];
         if (existing?.key === row.key) return;
-        const node = row.draw();
+        const node = row.draw(existing?.node, this.renderReply);
         if (existing === undefined) this.#log.append(node);
         else existing.node.replaceWith(node);
         this.#rows[index] = { key: row.key, node };
@@ -386,20 +425,19 @@ function buildElementClass(): new () => ChatPanelElement {
   return elementClass;
 }
 
-/** One line of the log: what it shows, as a key, and how to draw it. */
+/** One line of the log: what it shows, as a key, and how to draw it in place of `previous`. */
 interface Row {
   key: string;
-  draw: () => HTMLElement;
+  draw: (
+    previous: HTMLElement | undefined,
+    renderReply: ReplyRenderer,
+  ) => HTMLElement;
 }
 
-function logRows(session: ChatSession, greeting: string): Row[] {
+function logRows(session: ChatSession): Row[] {
   const messages = session.messages;
   const results = resultsById(messages);
   const rows: Row[] = [];
-
-  if (greeting !== "" && messages.length === 0) {
-    rows.push(bubbleRow("assistant", greeting));
-  }
 
   for (const message of messages) {
     if (message.role === "user") rows.push(bubbleRow("user", message.content));
@@ -433,13 +471,42 @@ function logRows(session: ChatSession, greeting: string): Row[] {
 function bubbleRow(role: "user" | "assistant", content: string): Row {
   return {
     key: `${role}:${content}`,
-    draw: () => {
+    draw: (previous, renderReply) => {
       const li = el("li", `chat-panel__bubble chat-panel__bubble--${role}`);
-      if (role === "user") li.textContent = content;
-      else li.append(...linkify(content));
+      if (role === "user") {
+        li.append(text(el("span", "chat-panel__text"), content));
+      } else drawReply(li, content, renderReply, previous);
       return li;
     },
   };
+}
+
+/** A reply through the renderer — see {@link ReplyRenderer}. */
+function drawReply(
+  li: HTMLLIElement,
+  content: string,
+  renderReply: ReplyRenderer,
+  previous: HTMLElement | undefined,
+): void {
+  const plain = () => li.replaceChildren(linkifyReply(content));
+  let result: Node | Promise<Node>;
+  try {
+    result = renderReply(content);
+  } catch {
+    plain();
+    return;
+  }
+  if (!(result instanceof Promise)) {
+    li.append(result);
+    return;
+  }
+  // Until it resolves: the reply as it was drawn a piece ago, while it streams in.
+  if (previous?.classList.contains("chat-panel__bubble--assistant")) {
+    li.append(...Array.from(previous.childNodes, (n) => n.cloneNode(true)));
+  } else {
+    plain();
+  }
+  result.then((node) => li.replaceChildren(node), plain);
 }
 
 function toolRow(call: ToolCall, result: ToolResult | undefined): Row {
@@ -460,37 +527,6 @@ function toolRow(call: ToolCall, result: ToolResult | undefined): Row {
       return li;
     },
   };
-}
-
-/**
- * Turns the `http(s)` URLs in a reply into links.
- *
- * Only `http:` and `https:` match, which is what makes this safe to run over text a model wrote:
- * a `javascript:` URL is not a URL here, it is a word. Trailing punctuation is left out of the
- * href, because a URL at the end of a sentence is followed by the sentence's full stop.
- *
- * @param content The reply
- * @returns The reply as text nodes and anchors
- */
-function linkify(content: string): (string | HTMLAnchorElement)[] {
-  const parts: (string | HTMLAnchorElement)[] = [];
-  let at = 0;
-
-  for (const match of content.matchAll(/https?:\/\/[^\s<>"']+/g)) {
-    const href = match[0].replace(/[.,;:!?)\]}'"]+$/, "");
-    const start = match.index;
-    if (start > at) parts.push(content.slice(at, start));
-    const anchor = el("a", "chat-panel__link");
-    anchor.href = href;
-    anchor.target = "_blank";
-    anchor.rel = "noopener noreferrer";
-    anchor.textContent = href;
-    parts.push(anchor);
-    at = start + href.length;
-  }
-
-  if (at < content.length) parts.push(content.slice(at));
-  return parts;
 }
 
 function resultsById(
@@ -592,7 +628,6 @@ const DEFAULT_STYLE = `
   max-width: 85%;
   padding: 0.5rem 0.75rem;
   border-radius: var(--chat-panel-radius, 0.75rem);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .chat-panel__bubble--user {
@@ -604,6 +639,9 @@ const DEFAULT_STYLE = `
   align-self: flex-start;
   border: 1px solid var(--chat-panel-border, color-mix(in srgb, CanvasText 20%, Canvas));
 }
+.chat-panel__bubble > :first-child { margin-top: 0; }
+.chat-panel__bubble > :last-child { margin-bottom: 0; }
+.chat-panel__text { white-space: pre-wrap; }
 .chat-panel__link { color: inherit; overflow-wrap: anywhere; }
 .chat-panel__tool {
   align-self: flex-start;

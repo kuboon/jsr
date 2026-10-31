@@ -34,7 +34,10 @@ For a chat inside your own layout, take the pieces under it:
 ```ts ignore
 import { ChatSession, createChatPanel } from "@kuboon/chat-element";
 
-const session = new ChatSession({ transport: "/helper-agent" });
+const session = new ChatSession({
+  transport: "/helper-agent",
+  greeting: "Ask me anything.",
+});
 const panel = createChatPanel(session); // a <chat-panel>
 panel.heading = "Help";
 sidebar.append(panel);
@@ -43,7 +46,7 @@ sidebar.append(panel);
 or in markup, with the session set from script:
 
 ```html ignore
-<chat-panel heading="Help" greeting="Ask me anything."></chat-panel>
+<chat-panel heading="Help"></chat-panel>
 ```
 
 ## Pointing at the page
@@ -95,6 +98,27 @@ it, appends the result, and posts again.
 `transport` is a path or URL, or `{ url, fetch }` to have something other than
 the network answer — a router running in the page, or a script, which is how a
 static host serves a working chat.
+
+## Drawing the replies
+
+Replies are shown as text, with their URLs linked (`linkifyReply`). A model that
+answers in Markdown gets `renderReply`: given a reply's text, it returns what
+goes in the bubble, as a node or a promise of one.
+
+```ts ignore
+import { hastToDom, markdownToHast } from "@kuboon/md";
+
+openChat({
+  transport: "/helper-agent",
+  renderReply: async (text) => hastToDom(await markdownToHast(text)),
+});
+```
+
+It runs again on every streamed piece; while a promise is pending, the bubble
+keeps what it showed before. What it returns goes into the page as it is, so it
+must sanitise what the model wrote (`@kuboon/md` does). On a panel of your own,
+set `panel.renderReply` before the conversation starts; replies already drawn
+are not drawn again.
 
 ## Styling
 
