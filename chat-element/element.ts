@@ -80,17 +80,47 @@ export function chatPanelLabels(lang: string): Required<ChatPanelLabels> {
 }
 
 /**
- * Draws one of the assistant's replies — for a model that answers in Markdown, say.
+ * Draws one of the assistant's replies — for a model that answers in Markdown, say. The default
+ * is {@link linkifyReply}.
  *
  * Given the reply's text, it returns what goes in the bubble: a node (a fragment for several),
  * or a promise of one. While a promise is pending the bubble shows what it showed before, so a
  * streaming reply does not flash back to plain text on every piece; the first draw, and a
- * renderer that throws or rejects, show the text with its URLs linked, as with no renderer.
+ * renderer that throws or rejects, show {@link linkifyReply}'s.
  *
  * It is called again whenever the reply changes, which while it streams is on every piece. What
  * it returns goes into the page as it is: a renderer of text a model wrote must sanitise it.
  */
 export type ReplyRenderer = (content: string) => Node | Promise<Node>;
+
+/**
+ * The default {@link ReplyRenderer}: the text as it is, line breaks kept, with its `http(s)` URLs
+ * linked.
+ *
+ * Only `http:` and `https:` match, which is what makes this safe to run over text a model wrote:
+ * a `javascript:` URL is not a URL here, it is a word. Trailing punctuation is left out of the
+ * href, because a URL at the end of a sentence is followed by the sentence's full stop.
+ */
+export function linkifyReply(content: string): Node {
+  const span = el("span", "chat-panel__text");
+  let at = 0;
+
+  for (const match of content.matchAll(/https?:\/\/[^\s<>"']+/g)) {
+    const href = match[0].replace(/[.,;:!?)\]}'"]+$/, "");
+    const start = match.index;
+    if (start > at) span.append(content.slice(at, start));
+    const anchor = el("a", "chat-panel__link");
+    anchor.href = href;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    anchor.textContent = href;
+    span.append(anchor);
+    at = start + href.length;
+  }
+
+  if (at < content.length) span.append(content.slice(at));
+  return span;
+}
 
 /**
  * A chat panel: the element's own API on top of `HTMLElement`.
@@ -116,8 +146,11 @@ export interface ChatPanelElement extends HTMLElement {
   picker: boolean;
   /** What the controls are called, overriding the names the language would give them. */
   labels: ChatPanelLabels;
-  /** Draws the assistant's replies; `null` shows them as text with their URLs linked. */
-  renderReply: ReplyRenderer | null;
+  /**
+   * Draws the assistant's replies; {@link linkifyReply} unless set. Set it before the
+   * conversation starts: replies already drawn are not drawn again.
+   */
+  renderReply: ReplyRenderer;
 }
 
 /** Built once, on the first {@link defineChatPanel} call in a DOM. */
@@ -129,7 +162,7 @@ function buildElementClass(): new () => ChatPanelElement {
   elementClass = class extends HTMLElement implements ChatPanelElement {
     #session: ChatSession | null = null;
     #overrides: ChatPanelLabels = {};
-    #renderReply: ReplyRenderer | null = null;
+    renderReply: ReplyRenderer = linkifyReply;
     #built = false;
     #listening: AbortController | null = null;
 
@@ -221,18 +254,6 @@ function buildElementClass(): new () => ChatPanelElement {
     }
     set labels(value: ChatPanelLabels) {
       this.#overrides = { ...this.#overrides, ...value };
-      this.#render();
-    }
-
-    get renderReply(): ReplyRenderer | null {
-      return this.#renderReply;
-    }
-    set renderReply(value: ReplyRenderer | null) {
-      if (value === this.#renderReply) return;
-      this.#renderReply = value;
-      // Every reply is drawn again with the new renderer.
-      this.#rows = [];
-      this.#log?.replaceChildren();
       this.#render();
     }
 
@@ -392,9 +413,7 @@ function buildElementClass(): new () => ChatPanelElement {
      * show, so all that is redrawn is the bubble that is growing.
      */
     #renderLog(session: ChatSession | null): void {
-      const rows = session === null
-        ? []
-        : logRows(session, this.greeting, this.#renderReply);
+      const rows = session === null ? [] : logRows(session, this.greeting);
       const atBottom =
         this.#log.scrollHeight - this.#log.scrollTop - this.#log.clientHeight <
           32;
@@ -402,7 +421,7 @@ function buildElementClass(): new () => ChatPanelElement {
       rows.forEach((row, index) => {
         const existing = this.#rows[index];
         if (existing?.key === row.key) return;
-        const node = row.draw(existing?.node);
+        const node = row.draw(existing?.node, this.renderReply);
         if (existing === undefined) this.#log.append(node);
         else existing.node.replaceWith(node);
         this.#rows[index] = { key: row.key, node };
@@ -419,27 +438,26 @@ function buildElementClass(): new () => ChatPanelElement {
 /** One line of the log: what it shows, as a key, and how to draw it in place of `previous`. */
 interface Row {
   key: string;
-  draw: (previous?: HTMLElement) => HTMLElement;
+  draw: (
+    previous: HTMLElement | undefined,
+    renderReply: ReplyRenderer,
+  ) => HTMLElement;
 }
 
-function logRows(
-  session: ChatSession,
-  greeting: string,
-  renderReply: ReplyRenderer | null,
-): Row[] {
+function logRows(session: ChatSession, greeting: string): Row[] {
   const messages = session.messages;
   const results = resultsById(messages);
   const rows: Row[] = [];
 
   if (greeting !== "" && messages.length === 0) {
-    rows.push(bubbleRow("assistant", greeting, renderReply));
+    rows.push(bubbleRow("assistant", greeting));
   }
 
   for (const message of messages) {
     if (message.role === "user") rows.push(bubbleRow("user", message.content));
     if (message.role !== "assistant") continue;
     if (message.content !== "") {
-      rows.push(bubbleRow("assistant", message.content, renderReply));
+      rows.push(bubbleRow("assistant", message.content));
     }
     for (const call of message.toolCalls ?? []) {
       rows.push(toolRow(call, results.get(call.id)));
@@ -464,41 +482,27 @@ function logRows(
   return rows;
 }
 
-function bubbleRow(
-  role: "user" | "assistant",
-  content: string,
-  renderReply: ReplyRenderer | null = null,
-): Row {
+function bubbleRow(role: "user" | "assistant", content: string): Row {
   return {
     key: `${role}:${content}`,
-    draw: (previous) => {
+    draw: (previous, renderReply) => {
       const li = el("li", `chat-panel__bubble chat-panel__bubble--${role}`);
-      if (role === "user") li.textContent = content;
-      else if (renderReply === null) li.append(...linkify(content));
-      else drawReply(li, content, renderReply, previous);
+      if (role === "user") {
+        li.append(text(el("span", "chat-panel__text"), content));
+      } else drawReply(li, content, renderReply, previous);
       return li;
     },
   };
 }
 
-const RENDERED = "chat-panel__bubble--rendered";
-
-/** A reply through the page's renderer — see {@link ReplyRenderer}. */
+/** A reply through the renderer — see {@link ReplyRenderer}. */
 function drawReply(
   li: HTMLLIElement,
   content: string,
   renderReply: ReplyRenderer,
   previous: HTMLElement | undefined,
 ): void {
-  const plain = () => {
-    li.classList.remove(RENDERED);
-    li.replaceChildren(...linkify(content));
-  };
-  const rendered = (node: Node) => {
-    li.classList.add(RENDERED);
-    li.replaceChildren(node);
-  };
-
+  const plain = () => li.replaceChildren(linkifyReply(content));
   let result: Node | Promise<Node>;
   try {
     result = renderReply(content);
@@ -507,18 +511,16 @@ function drawReply(
     return;
   }
   if (!(result instanceof Promise)) {
-    rendered(result);
+    li.append(result);
     return;
   }
-
-  // Until it resolves: the bubble this one replaces, while the same reply streams in.
-  if (previous?.classList.contains(RENDERED)) {
-    li.classList.add(RENDERED);
+  // Until it resolves: the reply as it was drawn a piece ago, while it streams in.
+  if (previous?.classList.contains("chat-panel__bubble--assistant")) {
     li.append(...Array.from(previous.childNodes, (n) => n.cloneNode(true)));
   } else {
     plain();
   }
-  result.then(rendered, plain);
+  result.then((node) => li.replaceChildren(node), plain);
 }
 
 function toolRow(call: ToolCall, result: ToolResult | undefined): Row {
@@ -539,37 +541,6 @@ function toolRow(call: ToolCall, result: ToolResult | undefined): Row {
       return li;
     },
   };
-}
-
-/**
- * Turns the `http(s)` URLs in a reply into links.
- *
- * Only `http:` and `https:` match, which is what makes this safe to run over text a model wrote:
- * a `javascript:` URL is not a URL here, it is a word. Trailing punctuation is left out of the
- * href, because a URL at the end of a sentence is followed by the sentence's full stop.
- *
- * @param content The reply
- * @returns The reply as text nodes and anchors
- */
-function linkify(content: string): (string | HTMLAnchorElement)[] {
-  const parts: (string | HTMLAnchorElement)[] = [];
-  let at = 0;
-
-  for (const match of content.matchAll(/https?:\/\/[^\s<>"']+/g)) {
-    const href = match[0].replace(/[.,;:!?)\]}'"]+$/, "");
-    const start = match.index;
-    if (start > at) parts.push(content.slice(at, start));
-    const anchor = el("a", "chat-panel__link");
-    anchor.href = href;
-    anchor.target = "_blank";
-    anchor.rel = "noopener noreferrer";
-    anchor.textContent = href;
-    parts.push(anchor);
-    at = start + href.length;
-  }
-
-  if (at < content.length) parts.push(content.slice(at));
-  return parts;
 }
 
 function resultsById(
@@ -671,7 +642,6 @@ const DEFAULT_STYLE = `
   max-width: 85%;
   padding: 0.5rem 0.75rem;
   border-radius: var(--chat-panel-radius, 0.75rem);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 .chat-panel__bubble--user {
@@ -683,9 +653,9 @@ const DEFAULT_STYLE = `
   align-self: flex-start;
   border: 1px solid var(--chat-panel-border, color-mix(in srgb, CanvasText 20%, Canvas));
 }
-.chat-panel__bubble--rendered { white-space: normal; }
-.chat-panel__bubble--rendered > :first-child { margin-top: 0; }
-.chat-panel__bubble--rendered > :last-child { margin-bottom: 0; }
+.chat-panel__bubble > :first-child { margin-top: 0; }
+.chat-panel__bubble > :last-child { margin-bottom: 0; }
+.chat-panel__text { white-space: pre-wrap; }
 .chat-panel__link { color: inherit; overflow-wrap: anywhere; }
 .chat-panel__tool {
   align-self: flex-start;

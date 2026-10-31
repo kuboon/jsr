@@ -98,9 +98,9 @@ static host serves a working chat.
 
 ## Drawing the replies
 
-Replies are shown as text, with their URLs linked. A model that answers in
-Markdown gets `renderReply`: given a reply's text, it returns what goes in the
-bubble, as a node or a promise of one.
+Replies are shown as text, with their URLs linked (`linkifyReply`). A model that
+answers in Markdown gets `renderReply`: given a reply's text, it returns what
+goes in the bubble, as a node or a promise of one.
 
 ```ts ignore
 import { hastToDom, markdownToHast } from "@kuboon/md";
@@ -114,7 +114,8 @@ openChat({
 It runs again on every streamed piece; while a promise is pending, the bubble
 keeps what it showed before. What it returns goes into the page as it is, so it
 must sanitise what the model wrote (`@kuboon/md` does). On a panel of your own,
-set `panel.renderReply`.
+set `panel.renderReply` before the conversation starts; replies already drawn
+are not drawn again.
 
 ## Styling
 

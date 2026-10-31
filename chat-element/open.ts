@@ -30,7 +30,7 @@ export interface OpenChatOptions extends ChatSessionOptions {
   greeting?: string;
   /** Placeholder for the composer. */
   placeholder?: string;
-  /** Draws the assistant's replies, such as from Markdown — see {@link ReplyRenderer}. */
+  /** Draws the assistant's replies, such as from Markdown. Defaults to `linkifyReply`. */
   renderReply?: ReplyRenderer;
   /**
    * An existing conversation to show, instead of starting one.

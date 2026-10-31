@@ -40,6 +40,7 @@ export {
   createChatPanel,
   DEFAULT_TAG_NAME,
   defineChatPanel,
+  linkifyReply,
 } from "./element.ts";
 export type {
   ChatPanelElement,
