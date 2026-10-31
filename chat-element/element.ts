@@ -136,8 +136,6 @@ export interface ChatPanelElement extends HTMLElement {
   session: ChatSession | null;
   /** The heading, reflected to the `heading` attribute. */
   heading: string;
-  /** What it says before the person has typed anything, reflected to `greeting`. */
-  greeting: string;
   /** The composer's placeholder, reflected to `placeholder`. */
   placeholder: string;
   /** Whether a close button is drawn, reflected to `closable`. */
@@ -178,7 +176,6 @@ function buildElementClass(): new () => ChatPanelElement {
     static get observedAttributes(): string[] {
       return [
         "heading",
-        "greeting",
         "placeholder",
         "closable",
         "no-picker",
@@ -219,13 +216,6 @@ function buildElementClass(): new () => ChatPanelElement {
     }
     set heading(value: string) {
       this.setAttribute("heading", value);
-    }
-
-    get greeting(): string {
-      return this.getAttribute("greeting") ?? "";
-    }
-    set greeting(value: string) {
-      this.setAttribute("greeting", value);
     }
 
     get placeholder(): string {
@@ -413,7 +403,7 @@ function buildElementClass(): new () => ChatPanelElement {
      * show, so all that is redrawn is the bubble that is growing.
      */
     #renderLog(session: ChatSession | null): void {
-      const rows = session === null ? [] : logRows(session, this.greeting);
+      const rows = session === null ? [] : logRows(session);
       const atBottom =
         this.#log.scrollHeight - this.#log.scrollTop - this.#log.clientHeight <
           32;
@@ -444,14 +434,10 @@ interface Row {
   ) => HTMLElement;
 }
 
-function logRows(session: ChatSession, greeting: string): Row[] {
+function logRows(session: ChatSession): Row[] {
   const messages = session.messages;
   const results = resultsById(messages);
   const rows: Row[] = [];
-
-  if (greeting !== "" && messages.length === 0) {
-    rows.push(bubbleRow("assistant", greeting));
-  }
 
   for (const message of messages) {
     if (message.role === "user") rows.push(bubbleRow("user", message.content));

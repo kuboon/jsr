@@ -42,6 +42,35 @@ const whereAmI: ClientTool = {
 };
 
 describe("ChatSession", () => {
+  it("shows the greeting until the first message, and never sends it", async () => {
+    const sent: ChatRequest[] = [];
+    const session = new ChatSession({
+      greeting: "Ask me anything.",
+      transport: {
+        url: ENDPOINT,
+        fetch: async (request) => {
+          sent.push(await request.json());
+          return new Response(
+            [{ type: "text", text: "Hi." }, { type: "done", reason: "end" }]
+              .map((e) => encodeEvent(e as AgentEvent)).join(""),
+            { headers: { "content-type": EVENT_STREAM_CONTENT_TYPE } },
+          );
+        },
+      },
+    });
+    assertEquals(session.messages, [
+      { role: "assistant", content: "Ask me anything." },
+    ]);
+
+    await session.send("hello");
+
+    assertEquals(sent[0].messages, [{ role: "user", content: "hello" }]);
+    assertEquals(session.messages, [
+      { role: "user", content: "hello" },
+      { role: "assistant", content: "Hi." },
+    ]);
+  });
+
   it("holds the conversation and fires change as it arrives", async () => {
     const session = sessionOver(() => [
       { type: "text", text: "Two " },

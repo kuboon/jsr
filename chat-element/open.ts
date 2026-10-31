@@ -26,8 +26,6 @@ import type { ChatSessionOptions } from "./session.ts";
 export interface OpenChatOptions extends ChatSessionOptions {
   /** The panel's heading. Defaults to the language's word for "Help". */
   title?: string;
-  /** What it says before the person has typed anything. */
-  greeting?: string;
   /** Placeholder for the composer. */
   placeholder?: string;
   /** Draws the assistant's replies, such as from Markdown. Defaults to `linkifyReply`. */
@@ -35,7 +33,8 @@ export interface OpenChatOptions extends ChatSessionOptions {
   /**
    * An existing conversation to show, instead of starting one.
    *
-   * When it is given, the transport and tool options are ignored — the session already has them.
+   * When it is given, the transport, tool and greeting options are ignored — the session already
+   * has them.
    */
   session?: ChatSession;
   /**
@@ -87,7 +86,6 @@ export interface ChatDialog {
 export function openChat(options: OpenChatOptions): ChatDialog {
   const {
     title,
-    greeting,
     placeholder,
     renderReply,
     modal = false,
@@ -110,7 +108,6 @@ export function openChat(options: OpenChatOptions): ChatDialog {
   const panel = createChatPanel(session);
   panel.closable = true;
   if (title !== undefined) panel.heading = title;
-  if (greeting !== undefined) panel.greeting = greeting;
   if (placeholder !== undefined) panel.placeholder = placeholder;
   if (renderReply !== undefined) panel.renderReply = renderReply;
 

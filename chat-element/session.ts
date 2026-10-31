@@ -92,6 +92,12 @@ export interface ChatSessionOptions {
    * bounce between the model and the page indefinitely.
    */
   maxRounds?: number;
+  /**
+   * What the assistant says before the person has typed anything. It is in {@link
+   * ChatSession.messages} as an assistant message until the first one is sent, and is never sent
+   * itself: the model does not see it.
+   */
+  greeting?: string;
 }
 
 const DEFAULT_MAX_ROUNDS = 4;
@@ -106,6 +112,7 @@ export class ChatSession extends EventTarget {
   #transport: Required<ChatTransport>;
   #tools: readonly ClientTool[];
   #maxRounds: number;
+  #greeting: string;
 
   #committed: ChatMessage[] = [];
   #turn: TurnBuilder | null = null;
@@ -121,18 +128,24 @@ export class ChatSession extends EventTarget {
     this.#transport = resolveTransport(options.transport);
     this.#tools = options.tools ?? [];
     this.#maxRounds = options.maxRounds ?? DEFAULT_MAX_ROUNDS;
+    this.#greeting = options.greeting ?? "";
   }
 
   /**
    * The conversation, including the turn currently arriving.
    *
    * A partly-streamed assistant message is in here as soon as its first word is, which is what
-   * makes rendering this list the whole of rendering the chat.
+   * makes rendering this list the whole of rendering the chat. Before anything is sent, it is the
+   * greeting, if there is one.
    */
   get messages(): readonly ChatMessage[] {
-    return this.#turn === null
-      ? this.#committed
-      : [...this.#committed, ...this.#turn.preview()];
+    if (this.#turn !== null) {
+      return [...this.#committed, ...this.#turn.preview()];
+    }
+    if (this.#committed.length === 0 && this.#greeting !== "") {
+      return [{ role: "assistant", content: this.#greeting }];
+    }
+    return this.#committed;
   }
 
   /** What the session is doing. */

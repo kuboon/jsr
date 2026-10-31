@@ -34,7 +34,10 @@ For a chat inside your own layout, take the pieces under it:
 ```ts ignore
 import { ChatSession, createChatPanel } from "@kuboon/chat-element";
 
-const session = new ChatSession({ transport: "/helper-agent" });
+const session = new ChatSession({
+  transport: "/helper-agent",
+  greeting: "Ask me anything.",
+});
 const panel = createChatPanel(session); // a <chat-panel>
 panel.heading = "Help";
 sidebar.append(panel);
@@ -43,7 +46,7 @@ sidebar.append(panel);
 or in markup, with the session set from script:
 
 ```html ignore
-<chat-panel heading="Help" greeting="Ask me anything."></chat-panel>
+<chat-panel heading="Help"></chat-panel>
 ```
 
 ## Pointing at the page
