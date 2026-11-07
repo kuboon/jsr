@@ -8,7 +8,8 @@
     "./tailwindcss-deno",
     "./share-element",
     "./chat-element",
-    "./bgm"
+    "./bgm",
+    "./native-map-url"
   ],
   "imports": {
     "shiki/core": "npm:shiki@^4.4.3/core",

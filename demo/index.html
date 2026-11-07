@@ -260,6 +260,30 @@
     .bgm-volumes label {
       margin: 0;
     }
+    .map-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    #map-zoom {
+      width: 100%;
+    }
+    a.button {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+    a.button.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .map-urls {
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
     .row {
       display: flex;
       flex-wrap: wrap;
@@ -282,6 +306,7 @@
         <a href="#share-element">@kuboon/share-element</a>
         <a href="#bgm">@kuboon/bgm</a>
         <a href="#chat-element">@kuboon/chat-element</a>
+        <a href="#native-map-url">@kuboon/native-map-url</a>
         <a href="#onboarding-kit">@kuboon/onboarding-kit</a>
       </nav>
     </header>
@@ -408,6 +433,41 @@
         <button type="button" class="primary" id="chat-open">
           Open the chat
         </button>
+      </section>
+
+      <section id="native-map-url" data-tour="native-map-url">
+        <h2>
+          <a
+            href="https://jsr.io/@kuboon/native-map-url"><code>@kuboon/native-map-url</code></a>
+        </h2>
+        <p class="lead">
+          A map link that opens the device's own map app: Apple Maps on iPhone,
+          iPad and Mac, Google Maps everywhere else. This device gets
+          <strong id="map-provider"></strong>.
+        </p>
+        <div class="map-fields">
+          <div>
+            <label for="map-latitude">Latitude</label>
+            <input id="map-latitude" type="text" inputmode="decimal"
+              value="35.681236">
+          </div>
+          <div>
+            <label for="map-longitude">Longitude</label>
+            <input id="map-longitude" type="text" inputmode="decimal"
+              value="139.767125">
+          </div>
+        </div>
+        <label for="map-zoom">Zoom: <span id="map-zoom-value"></span></label>
+        <input id="map-zoom" type="range" min="0" max="21" step="1" value="16">
+        <div class="row">
+          <a id="map-native" class="button primary" target="_blank"
+            rel="noopener">Open in the map app</a>
+          <span class="status" id="map-status" role="alert"></span>
+        </div>
+        <ul class="map-urls">
+          <li>Apple: <a id="map-apple" target="_blank" rel="noopener"></a></li>
+          <li>Google: <a id="map-google" target="_blank" rel="noopener"></a></li>
+        </ul>
       </section>
 
       <section id="onboarding-kit" data-tour="onboarding-kit">

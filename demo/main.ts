@@ -13,6 +13,7 @@ import { createOnboardingTour } from "@kuboon/onboarding-kit/element";
 import type { TourScenario } from "@kuboon/onboarding-kit";
 import { setupBgmDemo } from "./bgm.ts";
 import { setupChatDemo } from "./chat.ts";
+import { setupMapDemo } from "./map.ts";
 
 function byId<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -171,6 +172,7 @@ applyShareLang();
 
 setupBgmDemo();
 setupChatDemo();
+setupMapDemo();
 
 // --- @kuboon/onboarding-kit ---
 
