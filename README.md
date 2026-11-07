@@ -17,6 +17,7 @@
 | [@kuboon/share-element](https://jsr.io/@kuboon/share-element)               | [`share-element/`](./share-element)               | X/LINE/Threads 等のシェアボタンを備えたカスタムダイアログエレメント                      |
 | [@kuboon/bgm](https://jsr.io/@kuboon/bgm)                                   | [`bgm/`](./bgm)                                   | Web Audio でゲーム BGM を鳴らす土台(イントロ付きループ・クロスフェード・音量バス)        |
 | [@kuboon/chat-element](https://jsr.io/@kuboon/chat-element)                 | [`chat-element/`](./chat-element)                 | 要素ピッカー付きのストリーミングチャットパネル(カスタムエレメント、フレームワーク非依存) |
+| [@kuboon/native-map-url](https://jsr.io/@kuboon/native-map-url)             | [`native-map-url/`](./native-map-url)             | 端末に合わせて Apple マップ / Google マップを開くリンクを作る                            |
 
 ## 開発
 
